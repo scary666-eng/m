@@ -841,8 +841,8 @@ local CUSTOM_ICON_ASSETS = {
     -- Window chrome icons
     ["minimize"] = 87421957388063,
     ["minus"] = 87421957388063,
-    ["x"] = 80476116488549,
-    ["close"] = 80476116488549,
+    ["x"] = 93271781473010,
+    ["close"] = 93271781473010,
 }
 
 local function iconFromAssetId(id)
