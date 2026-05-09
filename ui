@@ -836,13 +836,13 @@ local CUSTOM_ICON_ASSETS = {
     ["settings"] = 123678931849472,
 
     -- Top-right dashboard button icon (separate from settings tab icon)
-    ["settings-topbar"] = 132123392357506,
+    ["settings-topbar"] = 99948891501507,
 
     -- Window chrome icons
     ["minimize"] = 87421957388063,
     ["minus"] = 87421957388063,
-    ["x"] = 93271781473010,
-    ["close"] = 93271781473010,
+    ["x"] = 138839578822455,
+    ["close"] = 138839578822455,
 }
 
 local function iconFromAssetId(id)
