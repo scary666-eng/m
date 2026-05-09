@@ -2,6 +2,7 @@ local Players          = game:GetService("Players")
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui          = game:GetService("CoreGui")
+local StarterGui       = game:GetService("StarterGui")
 local RunService       = game:GetService("RunService")
 local ContentProvider  = game:GetService("ContentProvider")
 local HttpService      = game:GetService("HttpService")
@@ -459,8 +460,88 @@ local THEME_PRESETS = {
 local SHADOW_ASSET = "rbxassetid://6015897843"
 local SHADOW_SLICE = Rect.new(49, 49, 450, 450)
 
+local preferredGuiHost
+
+local function getPlayerGui()
+    local lp = Players.LocalPlayer
+    if not lp then return nil end
+    local pg = lp:FindFirstChildOfClass("PlayerGui")
+    if pg then return pg end
+    local ok, waited = pcall(function()
+        return lp:WaitForChild("PlayerGui", 2)
+    end)
+    if ok then return waited end
+    return nil
+end
+
+local function collectGuiHosts()
+    local hosts, seen = {}, {}
+    local function push(inst)
+        if typeof(inst) ~= "Instance" then return end
+        if seen[inst] then return end
+        seen[inst] = true
+        hosts[#hosts + 1] = inst
+    end
+
+    if preferredGuiHost and preferredGuiHost.Parent then
+        push(preferredGuiHost)
+    end
+    if type(gethui) == "function" then
+        local ok, hui = pcall(gethui)
+        if ok then push(hui) end
+    end
+    push(CoreGui)
+    push(getPlayerGui())
+    return hosts
+end
+
 local function hostGui()
-    return (gethui and gethui()) or CoreGui
+    local hosts = collectGuiHosts()
+    return hosts[1] or CoreGui
+end
+
+local function destroyExistingGui(guiName)
+    for _, host in ipairs(collectGuiHosts()) do
+        local old = host:FindFirstChild(guiName)
+        if old then
+            pcall(function() old:Destroy() end)
+        end
+    end
+end
+
+local function createScreenGuiWithFallback(guiName, displayOrder)
+    for _, host in ipairs(collectGuiHosts()) do
+        local ok, gui = pcall(function()
+            local g = Instance.new("ScreenGui")
+            g.Name = guiName
+            g.IgnoreGuiInset = true
+            g.ResetOnSpawn = false
+            g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            g.DisplayOrder = displayOrder or 9990
+            g.Parent = host
+            return g
+        end)
+        if ok and gui and gui.Parent == host then
+            preferredGuiHost = host
+            return gui
+        end
+    end
+
+    error("[VantaUI] Unable to create ScreenGui in any host (gethui/CoreGui/PlayerGui).")
+end
+
+local function compatWarn(msg)
+    local text = "[VantaUI] " .. tostring(msg)
+    pcall(function()
+        warn(text)
+    end)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "VantaUI Compatibility",
+            Text = tostring(msg),
+            Duration = 6,
+        })
+    end)
 end
 
 local function new(class, props)
@@ -468,8 +549,21 @@ local function new(class, props)
     if props then
         local parent = props.Parent
         props.Parent = nil
-        for k, v in pairs(props) do inst[k] = v end
-        if parent then inst.Parent = parent end
+        for k, v in pairs(props) do
+            pcall(function()
+                inst[k] = v
+            end)
+        end
+        if parent then
+            local ok = pcall(function()
+                inst.Parent = parent
+            end)
+            if not ok then
+                pcall(function()
+                    inst.Parent = hostGui()
+                end)
+            end
+        end
     end
     return inst
 end
@@ -1056,19 +1150,11 @@ function Library:CreateWindow(cfg)
         or 2.5
 
     local guiName = "VantaUI_" .. name
-    local host = hostGui()
-    local existing = host:FindFirstChild(guiName)
-    if existing then existing:Destroy() end
-
-    local gui = new("ScreenGui", {
-        Name = guiName,
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 9990,
-        Parent = host,
-    })
-    installVantaFontWarmup(gui)
+    destroyExistingGui(guiName)
+    local gui = createScreenGuiWithFallback(guiName, 9990)
+    pcall(function()
+        installVantaFontWarmup(gui)
+    end)
 
     -- Plain Frame stack (sharp). Fade uses stepped emulated transparency — not CanvasGroup (blur).
     local canvas = new("Frame", {
@@ -2395,9 +2481,9 @@ function Library:CreateWindow(cfg)
     -- immediately on first open.
     Window.ToggleKey = Enum.KeyCode.K
 
-    -- Wrap the build block in a `do…end` scope so its many locals don't
-    -- inflate the enclosing CreateWindow function past Lua's 200-local cap.
-    do
+    -- Wrap dashboard bootstrap in pcall so executor-specific runtime
+    -- incompatibilities do not prevent the main UI from loading.
+    local dashboardBootOk, dashboardBootErr = pcall(function()
     -- ── Overlay frame (modal: blocks input from passing through) ────────────
     -- Dashboard extends 18px ABOVE BAR_H so its rounded TOP corners are
     -- hidden behind the topbar (z=31 > 30). Only the BOTTOM corners are
@@ -3286,7 +3372,25 @@ function Library:CreateWindow(cfg)
     end
     dashEnterBtn.MouseButton1Down:Connect(function(x, y) ripple(dashEnterBtn, x, y, theme.AccentHi) end)
     dashEnterBtn.MouseButton1Click:Connect(function() dismissDashboard(dashGoFirstTab) end)
-    end -- close `do` scope wrapping dashboard build
+    end) -- close dashboard bootstrap pcall
+    if not dashboardBootOk then
+        dashboardVisible = false
+        themesViewOpen = false
+        dashboardOverlay = nil
+        themesView = nil
+        dismissDashboard = function(onDone)
+            if onDone then onDone() end
+        end
+        showDashboard = function()
+            local st = Window._settingsTab
+            if st then
+                pcall(function()
+                    Window:SelectTab(st)
+                end)
+            end
+        end
+        compatWarn("Dashboard disabled on this executor: " .. tostring(dashboardBootErr))
+    end
     -- ═══════════════════════════════════════════════════════════════════════
     -- End dashboard overlay
     -- ═══════════════════════════════════════════════════════════════════════
@@ -3374,6 +3478,20 @@ function Library:CreateWindow(cfg)
         settingsBtn.MouseButton1Click:Connect(function()
             if Window.Minimized then
                 exitMiniMode()
+            end
+            -- Compatibility fallback: if dashboard subsystem failed to bootstrap
+            -- on this executor, route the gear button to Settings tab.
+            if not (dashboardOverlay and dashboardOverlay.Parent) then
+                if not Window._settingsTab then
+                    Window._settingsTabCreated = true
+                    pcall(function()
+                        Window:CreateSettingsTab(cfg.SettingsTabOptions)
+                    end)
+                end
+                if Window._settingsTab then
+                    Window:SelectTab(Window._settingsTab)
+                end
+                return
             end
             -- Toggle dashboard: gear opens it; clicking again dismisses back to the active tab
             if dashboardVisible then
@@ -5506,7 +5624,7 @@ function Library:CreateWindow(cfg)
     -- ══════════════════════════════════════════════════════════════════
     --  Search overlay  —  ; to open, Esc to dismiss
     -- ══════════════════════════════════════════════════════════════════
-    do
+    local searchBootOk, searchBootErr = pcall(function()
         local searchVisible = false
         local searchAnimToken = 0
         local searchTweenBag = {}
@@ -6078,6 +6196,11 @@ function Library:CreateWindow(cfg)
                 end
             end
         end)
+    end)
+    if not searchBootOk then
+        function Window:OpenSearch() end
+        function Window:CloseSearch() end
+        compatWarn("Search disabled on this executor: " .. tostring(searchBootErr))
     end
 
     -- Auto-add Settings tab after user tabs (task.defer fires when caller yields/finishes,
@@ -6108,17 +6231,22 @@ end
 local notifStack = {}
 function Library:Notify(opts)
     opts = opts or {}
-    local host = hostGui()
-    local notifGui = host:FindFirstChild("VantaNotifs")
+    local notifGui
+    for _, host in ipairs(collectGuiHosts()) do
+        local existing = host:FindFirstChild("VantaNotifs")
+        if existing then
+            notifGui = existing
+            break
+        end
+    end
     if not notifGui then
-        notifGui = new("ScreenGui", {
-            Name = "VantaNotifs",
-            IgnoreGuiInset = true,
-            ResetOnSpawn = false,
-            ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-            DisplayOrder = 10000,
-            Parent = host,
-        })
+        local ok, created = pcall(function()
+            return createScreenGuiWithFallback("VantaNotifs", 10000)
+        end)
+        if not ok or not created then
+            return
+        end
+        notifGui = created
     end
 
     local theme = THEME
