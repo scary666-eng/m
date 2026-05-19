@@ -27,7 +27,7 @@ local THEME = {
     Danger     = Color3.fromRGB(220, 65, 75),
     Success    = Color3.fromRGB(40, 180, 95),
     Warning    = Color3.fromRGB(220, 160, 45),
-    -- Liquid glass (light surfaces)
+
     GlassLite  = Color3.fromRGB(255, 255, 254),
     GlassMid   = Color3.fromRGB(225, 232, 248),
     GlassDeep  = Color3.fromRGB(200, 215, 242),
@@ -43,9 +43,6 @@ local THEME = {
     GlassTabInactiveDeep = Color3.fromRGB(220, 225, 236),
 }
 
--- Built-in theme presets selectable from the Settings tab. Live-applied to a
--- registered set of "main chrome" surfaces; controls created at build time keep
--- their creation-time colors.
 local THEME_PRESETS = {
     Light = {
         Background = Color3.fromRGB(245, 246, 250),
@@ -366,7 +363,7 @@ local THEME_PRESETS = {
         GlassTabInactiveMid  = Color3.fromRGB(44, 52, 64),
         GlassTabInactiveDeep = Color3.fromRGB(34, 40, 52),
     },
-    -- ── Extra modern presets (color-only) ───────────────────────────
+
     NeonSlate = {
         Background = Color3.fromRGB(10, 12, 18),
         Card       = Color3.fromRGB(18, 22, 32),
@@ -456,7 +453,6 @@ local THEME_PRESETS = {
     },
 }
 
--- Slice-9 rounded-rect shadow. Tinted dark for drop shadow, tinted blue for glow.
 local SHADOW_ASSET = "rbxassetid://6015897843"
 local SHADOW_SLICE = Rect.new(49, 49, 450, 450)
 
@@ -605,12 +601,10 @@ local function tween(inst, t, props, style, dir)
     return tw
 end
 
--- Roblox streams built-in fonts (Gotham, etc.) on first use; warm every weight/size we draw
--- so tab switches do not show a fallback → real font swap.
 local FONT_WARMUP_FONTS = {
     Enum.Font.Gotham,
-    Enum.Font.GothamMedium,
     Enum.Font.GothamBold,
+    Enum.Font.GothamBlack,
 }
 local FONT_WARMUP_SIZES = { 10, 11, 12, 13, 14, 15, 18, 30, 36, 38, 46 }
 
@@ -656,7 +650,6 @@ local function installVantaFontWarmup(screenGui)
         ContentProvider:PreloadAsync(preloadList)
     end)
 
-    -- Modern FontFace path (when available) touches the same families once more for cache
     pcall(function()
         for _, fontEnum in ipairs(FONT_WARMUP_FONTS) do
             local okff, ff = pcall(function()
@@ -687,7 +680,6 @@ local function installVantaFontWarmup(screenGui)
     end)
 end
 
--- =========== Lucide icons (Rayfield pack = nested ["48px"] atlas entries) ===========
 local LucideIcons
 
 local function httpGetRobust(url)
@@ -737,7 +729,6 @@ do
     end
 end
 
--- Rayfield compact row: { assetId, {w,h}, {x,y} }
 local function iconDataFromRayfieldRow(d)
     if type(d) ~= "table" then return nil end
     if type(d[1]) == "number" and type(d[2]) == "table" and type(d[3]) == "table" then
@@ -781,11 +772,9 @@ local function findIconInRayfieldPack(pack, name, lower)
     return nil
 end
 
--- Custom icon overrides (user-provided sheet). Keys are lowercased aliases.
 local CUSTOM_ICON_ASSETS = {
     ["info"] = 130722460248227,
 
-    -- "What's New"
     ["whatsnew"] = 72056573509149,
     ["what's new"] = 72056573509149,
     ["whats-new"] = 72056573509149,
@@ -793,21 +782,17 @@ local CUSTOM_ICON_ASSETS = {
 
     ["keyboard"] = 106543977247742,
 
-    -- "Player"
     ["player"] = 134043231495879,
     ["user"] = 134043231495879,
 
-    -- "Combat"
     ["combat"] = 81382086807414,
     ["zap"] = 81382086807414,
 
-    -- Repeat cycle arrow
     ["repeat"] = 126559877464373,
     ["repeat-cycle"] = 126559877464373,
     ["refresh-cw"] = 126559877464373,
     ["refresh"] = 126559877464373,
 
-    -- Additional tab sheet overrides
     ["farming"] = 126559877464373,
     ["farm"] = 126559877464373,
     ["sword"] = 126559877464373,
@@ -832,17 +817,14 @@ local CUSTOM_ICON_ASSETS = {
     ["utilities"] = 80191116180780,
     ["wrench"] = 80191116180780,
 
-    -- Settings tab icon
     ["settings"] = 123678931849472,
 
-    -- Top-right dashboard button icon (separate from settings tab icon)
     ["settings-topbar"] = 99948891501507,
 
-    -- Window chrome icons
     ["minimize"] = 87421957388063,
     ["minus"] = 87421957388063,
-    ["x"] = 138839578822455,
-    ["close"] = 138839578822455,
+    ["x"] = 124858252806023,
+    ["close"] = 124858252806023,
 }
 
 local function iconFromAssetId(id)
@@ -853,7 +835,6 @@ local function iconFromAssetId(id)
     }
 end
 
--- normalize icon lookup to {Image, ImageRectOffset, ImageRectSize}
 local function resolveIcon(name)
     if not name then return nil end
     if type(name) ~= "string" then name = tostring(name) end
@@ -865,7 +846,7 @@ local function resolveIcon(name)
     end
 
     if LucideIcons then
-        -- Rayfield main/icons.lua uses buckets like ["48px"] = { sword = { id, {48,48}, {x,y} }, ... }
+
         local ray = findIconInRayfieldPack(LucideIcons, name, lower)
         if ray then return ray end
 
@@ -899,8 +880,6 @@ local function resolveIcon(name)
     return nil
 end
 
--- Emulates group fade without CanvasGroup (which composites the whole UI to a texture = blurry).
--- Updates run in a few discrete steps so we do not hitch every RenderStep like the old tween hook.
 local function collectTransparencyBaseline(root)
     local out = {}
     local function push(inst, prop)
@@ -951,7 +930,6 @@ local function setGlassGradient(grad, lite, mid, deep)
     })
 end
 
---- Faux liquid-glass surface: bright rim + diagonal cool gradient (specular read top-left).
 local function applyLiquidGlass(inst, theme, cornerRadius, rimTransparency)
     rimTransparency = rimTransparency ~= nil and rimTransparency or 0.42
     local gl = theme.GlassLite or THEME.GlassLite
@@ -1004,7 +982,6 @@ local function rgbToHsv(c)
     return h, s, v
 end
 
--- Rayfield passes CurrentOption as a table even for single-select — unwrap it.
 local function normalizeCurrent(cur, multi, options)
     if multi then
         local set = {}
@@ -1019,7 +996,6 @@ local function normalizeCurrent(cur, multi, options)
     end
 end
 
--- Expanding ripple at (globalX, globalY) inside an element.
 local function ripple(host, gx, gy, color)
     local ap = host.AbsolutePosition
     local lx, ly = gx - ap.X, gy - ap.Y
@@ -1116,9 +1092,6 @@ function Library:CreateWindow(cfg)
         setmetatable(theme, { __index = THEME })
     end
 
-    -- mobile mode: set any of these to true (cfg.Mobile / _G.mobile_ui /
-    -- getgenv().mobile_ui / shared.mobile_ui). getgenv() is critical —
-    -- many executors give each loadstring chunk its own _G.
     local function readMobile()
         if cfg.Mobile then return true end
         if rawget(_G, "mobile_ui") then return true end
@@ -1143,7 +1116,6 @@ function Library:CreateWindow(cfg)
     local SIDE_W = MOBILE and 130 or 160
     local BAR_H  = MOBILE and 46  or 52
 
-    -- Title logo idle reset (after tab activity); incremented on each tab select / dismiss splash
     local headerIdleStamp = 0
     local headerLogoIdleSec = (type(cfg.HeaderLogoIdleSeconds) == "number" and cfg.HeaderLogoIdleSeconds > 0)
         and cfg.HeaderLogoIdleSeconds
@@ -1156,7 +1128,6 @@ function Library:CreateWindow(cfg)
         installVantaFontWarmup(gui)
     end)
 
-    -- Plain Frame stack (sharp). Fade uses stepped emulated transparency — not CanvasGroup (blur).
     local canvas = new("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
@@ -1212,7 +1183,6 @@ function Library:CreateWindow(cfg)
         end)
     end
 
-    -- container holds shadow + glow + card so they track together
     local windowFrame = new("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
@@ -1226,8 +1196,6 @@ function Library:CreateWindow(cfg)
     windowFrameScale.Scale = 0.965
     windowFrameScale.Parent = windowFrame
 
-    -- Slice-shadow glow, sized so the soft fade is visible without
-    -- exposing a hard rectangular outline.
     local glow = new("ImageLabel", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
@@ -1253,7 +1221,6 @@ function Library:CreateWindow(cfg)
     corner(card, 18)
     stroke(card, theme.Stroke, 1, 0.2)
 
-    -- soft top-to-bottom shade for depth
     local cardBg = new("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = theme.Card,
@@ -1272,13 +1239,6 @@ function Library:CreateWindow(cfg)
         Parent = cardBg,
     })
 
-    -- Topbar fills the top of the card edge-to-edge. The card itself has
-    -- corner(18) + ClipsDescendants, so the topbar's TOP corners are
-    -- automatically rounded by the card's clip mask. Its BOTTOM is flat,
-    -- meeting the dashboard/content area cleanly with no exposed gaps.
-    -- ZIndex 31 puts it ABOVE the dashboardOverlay (z=30) so the dashboard
-    -- can extend slightly upward (for clean rounded bottom corners) and
-    -- have its rounded TOP edges hidden behind the topbar.
     local topbar = new("Frame", {
         Size = UDim2.new(1, 0, 0, BAR_H),
         BackgroundColor3 = theme.TopBar,
@@ -1289,13 +1249,6 @@ function Library:CreateWindow(cfg)
     })
     corner(topbar, 18)
 
-    -- UICorner rounds all four corners, but the bottom edge of the topbar
-    -- is supposed to meet the dashboard cleanly. Without this mask, the
-    -- rounded bottom-left/right cutouts let the layers behind (cardBg /
-    -- dashboardOverlay) bleed through as small dark triangles. A rectangular
-    -- fill in the same color, parented inside the topbar, draws above the
-    -- topbar's own (cut) background and covers those cutouts — leaving the
-    -- top corners rounded but the bottom edge flat.
     new("Frame", {
         Position         = UDim2.new(0, 0, 1, -18),
         Size             = UDim2.new(1, 0, 0, 18),
@@ -1305,7 +1258,6 @@ function Library:CreateWindow(cfg)
         Parent           = topbar,
     })
 
-    -- accent sheen under the topbar
     local sheen = new("Frame", {
         Position = UDim2.new(0, 0, 1, -1),
         Size = UDim2.new(1, 0, 0, 1),
@@ -1342,7 +1294,7 @@ function Library:CreateWindow(cfg)
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(44, 0),
         Size = UDim2.new(0, 320, 1, 0),
-        Font = Enum.Font.GothamBold,
+        Font = Enum.Font.GothamBlack,
         TextSize = 15,
         TextColor3 = theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1372,14 +1324,13 @@ function Library:CreateWindow(cfg)
         })
     end
 
-    -- When there is no game subtitle line, show the active tab name under the title (synced on tab click).
     local headerTabLabel
     if not hasSub then
         headerTabLabel = new("TextLabel", {
             BackgroundTransparency = 1,
             Position = UDim2.fromOffset(64, 34),
             Size = UDim2.new(0, 280, 0, 14),
-            Font = Enum.Font.GothamMedium,
+            Font = Enum.Font.GothamBold,
             TextSize = 11,
             TextColor3 = theme.AccentDeep,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -1390,7 +1341,6 @@ function Library:CreateWindow(cfg)
         })
     end
 
-    -- Active-tab icon shown on the subtitle/header line.
     local headerTabIcon = new("ImageLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(44, hasSub and 29 or 35),
@@ -1416,7 +1366,6 @@ function Library:CreateWindow(cfg)
         end
     end
 
-    -- set title layout based on minimized + subtitle presence
     local function layoutTitle(minimized)
         if subtitleLabel and not minimized then
             title.Position = UDim2.fromOffset(44, 8)
@@ -1467,6 +1416,7 @@ function Library:CreateWindow(cfg)
         ZIndex = 13,
         Parent = closeBtn,
     })
+
     local closeIconImg
     do
         local closeIcon = resolveIcon("x")
@@ -1540,8 +1490,6 @@ function Library:CreateWindow(cfg)
         end
     end
 
-    -- Settings gear: lives next to min/close instead of in the sidebar.
-    -- Button is pre-built; the tab it opens is created later via task.defer.
     local settingsBtn, settingsStroke, settingsGearImg, settingsIconHost
     if cfg.SettingsTab ~= false then
         settingsBtn = new("TextButton", {
@@ -1558,7 +1506,7 @@ function Library:CreateWindow(cfg)
             ZIndex = 12,
             Parent = topbar,
         })
-        settingsStroke = select(1, applyLiquidGlass(settingsBtn, theme, 999)) -- true circle
+        settingsStroke = select(1, applyLiquidGlass(settingsBtn, theme, 999))
         local gear = resolveIcon("settings-topbar")
         settingsIconHost = new("Frame", {
             AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1583,12 +1531,13 @@ function Library:CreateWindow(cfg)
                 Parent = settingsIconHost,
             })
         else
-            settingsBtn.Text = "S" -- fallback if Lucide pack unavailable
+            settingsBtn.Text = "S"
         end
     end
 
     local function setHeaderButtonContrast()
-        local ref = theme.TopBar or theme.CardTop or theme.Background or Color3.fromRGB(255, 255, 255)
+
+        local ref = topbar.BackgroundColor3
         local luminance = (ref.R * 0.299) + (ref.G * 0.587) + (ref.B * 0.114)
         local fg = luminance > 0.58 and Color3.fromRGB(12, 16, 24) or Color3.fromRGB(250, 252, 255)
         closeBtn.TextColor3 = fg
@@ -1617,11 +1566,6 @@ function Library:CreateWindow(cfg)
     })
     corner(sidebar, 18)
 
-    -- The sidebar's UICorner rounds all four corners, but only the bottom-left
-    -- coincides with the card's rounded corner. The other three (top-left,
-    -- top-right, bottom-right) are interior cuts that let the layers behind
-    -- (cardBg / dashboardOverlay) show through. Cover them with rectangular
-    -- fills in the sidebar color so only the bottom-left stays rounded.
     new("Frame", {
         Position         = UDim2.fromOffset(0, 0),
         Size             = UDim2.new(1, 0, 0, 18),
@@ -1684,7 +1628,7 @@ function Library:CreateWindow(cfg)
         Position = UDim2.new(0, 0, 1, 0),
         Size = UDim2.new(1, 0, 0, 24),
         BackgroundTransparency = 1,
-        Font = Enum.Font.GothamMedium,
+        Font = Enum.Font.GothamBold,
         TextSize = 10,
         TextColor3 = theme.Muted,
         Text = "VANTA • " .. (cfg.LoadingTitle or "v1"),
@@ -1702,7 +1646,6 @@ function Library:CreateWindow(cfg)
         Parent = card,
     })
 
-    -- very subtle decorative orbs (soft)
     local contentOrb = new("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.85, 0.88),
@@ -1734,7 +1677,6 @@ function Library:CreateWindow(cfg)
         Parent = contentHolder,
     })
 
-    -- Minimized chrome: medium-sized, calm, logo-first.
     local MINI_W = MOBILE and 188 or 224
     local MINI_H = MOBILE and 52 or 56
     local miniBar = new("Frame", {
@@ -1764,7 +1706,7 @@ function Library:CreateWindow(cfg)
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(56, 0),
         Size = UDim2.new(1, -112, 1, 0),
-        Font = Enum.Font.GothamBold,
+        Font = Enum.Font.GothamBlack,
         TextSize = 13,
         TextColor3 = theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1876,7 +1818,6 @@ function Library:CreateWindow(cfg)
     miniBarScale.Scale = 1
     miniBarScale.Parent = miniBar
 
-    -- ── drag (moves the whole windowFrame) ──────────────────────────────
     local dragging = false
     local miniDragging = false
     local dragLocked = false
@@ -1933,21 +1874,28 @@ function Library:CreateWindow(cfg)
         end
     end)
 
-    -- entrance: clean scale-up, no splash
     windowFrame.Size = UDim2.fromOffset(WIN_W, WIN_H)
     windowFrameScale.Scale = 0.94
     tween(windowFrameScale, 0.32, { Scale = 1 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
-    -- Snapshot of the theme as it stood at build time. We use it to remap any
-    -- Color3 in the tree that equals a known theme value. Updated after each apply.
     local lastTheme = {}
     for k, v in pairs(theme) do lastTheme[k] = v end
+
+    local themeRefreshers   = {}
+    local themePreviewRoots = {}
+    local function registerThemeRefresher(fn)
+        table.insert(themeRefreshers, fn)
+    end
+    local function runThemeRefreshers()
+        for _, fn in ipairs(themeRefreshers) do
+            pcall(fn)
+        end
+    end
 
     local function colorKey(c)
         return string.format("%.4f,%.4f,%.4f", c.R, c.G, c.B)
     end
 
-    -- Derive a coherent 4-stop accent ramp from a single picked color.
     local function deriveAccentRamp(c)
         local h, sv, vv = rgbToHsv(c)
         return {
@@ -1958,10 +1906,6 @@ function Library:CreateWindow(cfg)
         }
     end
 
-    -- Theme application via tree-walker: any Color3 prop or gradient stop on a
-    -- descendant of the window that equals an OLD theme value gets remapped to
-    -- the corresponding NEW value. Catches every control built off the theme
-    -- without per-element registration.
     local function applyTheme(presetName, accentColor)
         local newTheme = {}
         for k, v in pairs(lastTheme) do newTheme[k] = v end
@@ -1984,6 +1928,7 @@ function Library:CreateWindow(cfg)
             for k, v in pairs(newTheme) do theme[k] = v end
             for k, v in pairs(newTheme) do lastTheme[k] = v end
             setHeaderButtonContrast()
+            runThemeRefreshers()
             return
         end
 
@@ -2011,13 +1956,23 @@ function Library:CreateWindow(cfg)
             if changed then grad.Color = ColorSequence.new(newKps) end
         end
 
-        -- Single descent list; per-property indexing only on classes that *have* the property
-        -- (e.g. PlaceholderColor3 is TextBox-only; reading it on TextLabel throws).
+        local excluded = {}
+        for _, root in ipairs(themePreviewRoots) do
+            if root and root.Parent then
+                excluded[root] = true
+                for _, d in ipairs(root:GetDescendants()) do
+                    excluded[d] = true
+                end
+            end
+        end
+
         local descendants = canvas:GetDescendants()
         for i = 1, #descendants do
             local inst = descendants[i]
             local cn = inst.ClassName
-            if cn == "Frame" or cn == "ScrollingFrame" or cn == "TextLabel"
+            if excluded[inst] then
+
+            elseif cn == "Frame" or cn == "ScrollingFrame" or cn == "TextLabel"
                or cn == "TextButton" or cn == "TextBox" or cn == "ImageLabel"
                or cn == "ImageButton" then
                 tryRemap(inst, "BackgroundColor3")
@@ -2043,9 +1998,9 @@ function Library:CreateWindow(cfg)
         for k, v in pairs(newTheme) do theme[k] = v end
         for k, v in pairs(newTheme) do lastTheme[k] = v end
         setHeaderButtonContrast()
+        runThemeRefreshers()
     end
 
-    -- Coalesce rapid accent drags to one tree walk per defer (avoids hitch while scrubbing).
     local pendingAccentColor
     local accentFlushScheduled
     local function flushPendingAccent()
@@ -2074,7 +2029,6 @@ function Library:CreateWindow(cfg)
         return ok
     end
 
-    -- subtle breathing glow
     local alive = true
     gui.Destroying:Connect(function() alive = false end)
     task.spawn(function()
@@ -2114,11 +2068,6 @@ function Library:CreateWindow(cfg)
         or "default"
     )
 
-    -- ── Favorite-search persistence ────────────────────────────────────────
-    -- Favorites are keyed by a stable "<tab>|<kind>|<name>" string so they
-    -- survive across executions (entry tables themselves are recreated each
-    -- time the UI is built). Saves are debounced; loads happen here so that
-    -- registerSearch (called later per-tab) can mark matching entries.
     local function favoritesPath()
         local folder = Window.ConfigFolder or sanitizeConfigName(name)
         return string.format("%s/favorites.json", folder)
@@ -2156,11 +2105,7 @@ function Library:CreateWindow(cfg)
         if type(isfolder) == "function" and not isfolder(folder) then
             if type(makefolder) == "function" then pcall(makefolder, folder) end
         end
-        -- Build the saved-keys set from the live Favorites map, then merge
-        -- in any previously-saved keys whose entries haven't been registered
-        -- yet this session (e.g., a tab that wasn't opened). This prevents
-        -- favorites from silently disappearing the first time you toggle one
-        -- before all tabs have been built.
+
         local seen = {}
         local keys = {}
         for entry, flag in pairs(Window.Favorites) do
@@ -2197,8 +2142,6 @@ function Library:CreateWindow(cfg)
         end)
     end
 
-    -- Theme persistence helpers: dashboard/theme-card selections should be
-    -- written automatically and restored immediately on next execution.
     local themeAutoSaveToken = 0
     local function queueThemeAutoSave()
         if type(writefile) ~= "function" then return end
@@ -2257,33 +2200,20 @@ function Library:CreateWindow(cfg)
     closeBtn.MouseButton1Down:Connect(function(x, y) ripple(closeBtn, x, y, Color3.fromRGB(255,255,255)) end)
     minBtn.MouseButton1Down:Connect(function(x, y)   ripple(minBtn,   x, y, Color3.fromRGB(255,255,255)) end)
 
-    -- ═══════════════════════════════════════════════════════════════════════
-    -- Dashboard — premium card layout with dedicated Themes view.
-    -- - Modal: blocks clicks on tabs/sidebar behind via Active=true
-    -- - Top-bar back arrow restores the dashboard from any tab
-    -- - Themes button opens a separate slide-in view
-    -- ═══════════════════════════════════════════════════════════════════════
     local BACK_ARROW_ID = "rbxassetid://11770525190"
 
     local dashboardVisible  = true
     local themesViewOpen    = false
-    local dashboardOverlay  -- forward; assigned below
-    local themesView        -- forward; assigned below
+    local dashboardOverlay
+    local themesView
 
-    -- The dashboard is reached only via the gear icon in the top-bar, never
-    -- via a back arrow — that arrow lives only inside the Themes sub-view.
     local function dismissDashboard(onDone)
         if not dashboardVisible then
             if onDone then onDone() end
             return
         end
         dashboardVisible = false
-        -- Collapse height while pinning the bottom edge to the card's bottom
-        -- (Position.Y + Size.Y stays at WIN_H throughout). This keeps the
-        -- overlay's rounded bottom corners aligned with the card's rounded
-        -- bottom corners during the entire animation, instead of letting the
-        -- frame extend past the card and bleed into the card's corner cutouts
-        -- (Roblox ClipsDescendants is rectangular, not rounded).
+
         tween(dashboardOverlay, 0.28, {
             Position = UDim2.fromOffset(0, WIN_H),
             Size     = UDim2.new(1, 0, 0, 0),
@@ -2294,8 +2224,7 @@ function Library:CreateWindow(cfg)
                 dashboardOverlay.Position = UDim2.fromOffset(0, BAR_H - 18)
                 dashboardOverlay.Size     = UDim2.new(1, 0, 1, -BAR_H + 18)
             end
-            -- Always reset the Themes sub-view so re-opening the dashboard
-            -- starts on the main page.
+
             if themesView and themesView.Parent then
                 themesView.Position = UDim2.fromScale(1.05, 0)
                 themesView.Visible  = false
@@ -2308,8 +2237,7 @@ function Library:CreateWindow(cfg)
     local function showDashboard()
         if dashboardVisible then return end
         dashboardVisible = true
-        -- Start collapsed at the bottom edge of the card, then grow upward
-        -- with bottom pinned. See dismissDashboard for the rationale.
+
         dashboardOverlay.Position = UDim2.fromOffset(0, WIN_H)
         dashboardOverlay.Size     = UDim2.new(1, 0, 0, 0)
         dashboardOverlay.Visible  = true
@@ -2319,11 +2247,6 @@ function Library:CreateWindow(cfg)
         }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     end
 
-    -- ═══════════════════════════════════════════════════════════════════════
-    -- Close-confirmation dialog
-    -- A small, centred modal in its own ScreenGui that asks the user to
-    -- confirm before destroying the menu, and reminds them of the toggle key.
-    -- ═══════════════════════════════════════════════════════════════════════
     local closeConfirmOpen = false
     local function showCloseConfirm()
         if closeConfirmOpen then return end
@@ -2342,7 +2265,6 @@ function Library:CreateWindow(cfg)
             Parent           = host,
         })
 
-        -- dim backdrop (also catches clicks anywhere outside the modal)
         local backdrop = new("TextButton", {
             Size                   = UDim2.fromScale(1, 1),
             BackgroundColor3       = Color3.new(0, 0, 0),
@@ -2409,7 +2331,7 @@ function Library:CreateWindow(cfg)
             BackgroundColor3 = theme.Row,
             BorderSizePixel  = 0,
             Text             = "Cancel",
-            Font             = Enum.Font.GothamMedium,
+            Font             = Enum.Font.GothamBold,
             TextSize         = 12,
             TextColor3       = theme.Text,
             AutoButtonColor  = false,
@@ -2437,7 +2359,6 @@ function Library:CreateWindow(cfg)
         })
         corner(confirmBtn, 8)
 
-        -- entrance: fade backdrop + lift modal
         tween(backdrop, 0.18, { BackgroundTransparency = 0.55 })
         tween(modal,    0.22, {
             Position = UDim2.fromScale(0.5, 0.5),
@@ -2457,7 +2378,6 @@ function Library:CreateWindow(cfg)
             end)
         end
 
-        -- Hover effects (subtle)
         cancelBtn.MouseEnter:Connect(function()
             tween(cancelBtn,    0.12, { BackgroundColor3 = theme.RowHover })
             tween(cancelStroke, 0.12, { Color = theme.Accent, Transparency = 0.2 })
@@ -2475,20 +2395,10 @@ function Library:CreateWindow(cfg)
         end)
     end
 
-    -- Default the toggle keybind to K (overridable via cfg.SettingsTabOptions
-    -- or by the user picking a new key in settings). The InputBegan listener
-    -- above checks Window.ToggleKey, so setting it here makes K work
-    -- immediately on first open.
     Window.ToggleKey = Enum.KeyCode.K
 
-    -- Wrap dashboard bootstrap in pcall so executor-specific runtime
-    -- incompatibilities do not prevent the main UI from loading.
     local dashboardBootOk, dashboardBootErr = pcall(function()
-    -- ── Overlay frame (modal: blocks input from passing through) ────────────
-    -- Dashboard extends 18px ABOVE BAR_H so its rounded TOP corners are
-    -- hidden behind the topbar (z=31 > 30). Only the BOTTOM corners are
-    -- visible, and they line up perfectly with the card's rounded bottom.
-    -- Children are shifted down by TOP_EXT to keep their visual position.
+
     local DASH_TOP_EXT = 18
     dashboardOverlay = new("Frame", {
         Position         = UDim2.fromOffset(0, BAR_H - DASH_TOP_EXT),
@@ -2498,15 +2408,11 @@ function Library:CreateWindow(cfg)
         ZIndex           = 30,
         ClipsDescendants = true,
         Visible          = true,
-        Active           = true,   -- sinks clicks; sidebar/content under it cannot be clicked
+        Active           = true,
         Parent           = card,
     })
     corner(dashboardOverlay, 18)
 
-    -- ── Layout math (no scroll, everything fits exactly) ───────────────────
-    -- BOT_PAD is larger than PAD so the bottom button row clears the card's
-    -- rounded bottom corners (corner radius 18). Otherwise the cards would
-    -- extend into the rounded corner mask and look sharp/clipped at the bottom.
     local PAD     = 14
     local BOT_PAD = 24
     local GAP     = 10
@@ -2522,15 +2428,13 @@ function Library:CreateWindow(cfg)
     local rightW  = innerW - leftW - GAP
     local rightX  = PAD + leftW + GAP
 
-    -- ── Player + game info ────────────────────────────────────────────────
     local localPlayer = Players.LocalPlayer
     local dispName    = (localPlayer and localPlayer.DisplayName) or "Player"
     local userName2   = (localPlayer and localPlayer.Name) or ""
     local dashVersion = tostring(cfg.LoadingTitle or "v1")
 
-    -- Fetch real game name asynchronously (won't yield the build).
     local dashGameName    = tostring(game.Name)
-    local heroSubtitleLbl  -- updated when MarketplaceService returns
+    local heroSubtitleLbl
     task.spawn(function()
         local ok, mktInfo = pcall(function()
             return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
@@ -2543,8 +2447,6 @@ function Library:CreateWindow(cfg)
         end
     end)
 
-    -- ── Big-card builder ───────────────────────────────────────────────────
-    -- title at top + 1-line description, content area below
     local function makeBigCard(x, y, w, h, title, desc)
         local cd = new("Frame", {
             Position         = UDim2.fromOffset(x, y),
@@ -2597,7 +2499,6 @@ function Library:CreateWindow(cfg)
         return cd, content
     end
 
-    -- Sub-card with bold title + small descriptor (the reference style).
     local function makeSubCard(parent, layoutOrder, titleText, descText)
         local cell = new("Frame", {
             BackgroundColor3 = theme.Row,
@@ -2639,7 +2540,6 @@ function Library:CreateWindow(cfg)
         return cell, titleLbl, descLbl
     end
 
-    -- ── HERO ────────────────────────────────────────────────────────────────
     local heroFrame = new("Frame", {
         Position         = UDim2.fromOffset(PAD, yHero),
         Size             = UDim2.fromOffset(innerW, HERO_H),
@@ -2652,8 +2552,6 @@ function Library:CreateWindow(cfg)
     corner(heroFrame, 14)
     stroke(heroFrame, theme.Stroke, 1, 0.4)
 
-    -- Avatar headshot. rbxthumb:// is a non-yielding content URI so the build
-    -- never hangs on the thumbnail server.
     local headshotImg = "rbxthumb://type=AvatarHeadShot&id=0&w=150&h=150"
     if localPlayer and localPlayer.UserId then
         headshotImg = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(localPlayer.UserId) .. "&w=150&h=150"
@@ -2672,7 +2570,6 @@ function Library:CreateWindow(cfg)
     corner(avatarImg, 999)
     stroke(avatarImg, theme.Stroke, 1, 0.5)
 
-    -- Vertically centered hello + subtitle (no overlap with the rounded card edges).
     local heroTextHolder = new("Frame", {
         Position               = UDim2.fromOffset(64, 0),
         Size                   = UDim2.new(1, -180, 1, 0),
@@ -2725,13 +2622,12 @@ function Library:CreateWindow(cfg)
     })
     corner(dashEnterBtn, 8)
 
-    -- ── SERVER (mid-left, 6 sub-cards 2×3) ─────────────────────────────────
     local serverCard, serverContent = makeBigCard(
         PAD, yMid, leftW, midH,
         "Server",
         "Information on the session you're currently in"
     )
-    -- Grid for 6 stat sub-cards
+
     local serverGrid = new("Frame", {
         Size                   = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
@@ -2739,7 +2635,7 @@ function Library:CreateWindow(cfg)
         ZIndex                 = 34,
         Parent                 = serverContent,
     })
-    -- Pure layout math (AbsoluteSize would be 0 during build).
+
     local SCELL_GAP = 8
     local SCELL_W   = math.floor((leftW - 24 - 2 * SCELL_GAP) / 3)
     local SCELL_H   = math.floor((midH - 62 - SCELL_GAP) / 2)
@@ -2757,7 +2653,6 @@ function Library:CreateWindow(cfg)
     local _, _, uptimeDescLbl  = makeSubCard(serverGrid, 5, "Server Up",    "—")
     makeSubCard(serverGrid, 6, "Game ID",     tostring(game.GameId))
 
-    -- Live updates: ping (LocalPlayer:GetNetworkPing) & uptime (DistributedGameTime).
     task.spawn(function()
         while card and card.Parent do
             if latencyDescLbl and latencyDescLbl.Parent then
@@ -2783,14 +2678,12 @@ function Library:CreateWindow(cfg)
         end
     end)
 
-    -- ── ACTIVITY (eye-candy: ambient sin-wave bars) ────────────────────────
     local activityCard, activityContent = makeBigCard(
         rightX, yMid, rightW, midH,
         "Activity",
         "The menu is alive."
     )
 
-    -- Live status pill (top-right of the card content area)
     local livePill = new("Frame", {
         AnchorPoint            = Vector2.new(1, 0),
         Position               = UDim2.new(1, 0, 0, 0),
@@ -2816,7 +2709,7 @@ function Library:CreateWindow(cfg)
         BackgroundTransparency = 1,
         Position       = UDim2.fromOffset(16, 0),
         Size           = UDim2.new(1, -16, 1, 0),
-        Font           = Enum.Font.GothamMedium,
+        Font           = Enum.Font.GothamBold,
         TextSize       = 9,
         TextColor3     = theme.Accent,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2825,7 +2718,6 @@ function Library:CreateWindow(cfg)
         Parent         = livePill,
     })
 
-    -- Bar wave visualizer
     local NUM_BARS    = 28
     local BAR_W       = 4
     local BAR_GAP     = 5
@@ -2842,7 +2734,7 @@ function Library:CreateWindow(cfg)
 
     local bars = {}
     for i = 1, NUM_BARS do
-        local edgeFade = math.abs(i - (NUM_BARS + 1) / 2) / ((NUM_BARS + 1) / 2)  -- 0 center → 1 edges
+        local edgeFade = math.abs(i - (NUM_BARS + 1) / 2) / ((NUM_BARS + 1) / 2)
         local b = new("Frame", {
             AnchorPoint            = Vector2.new(0, 0.5),
             Position               = UDim2.fromOffset((i - 1) * (BAR_W + BAR_GAP), 55),
@@ -2857,14 +2749,13 @@ function Library:CreateWindow(cfg)
         bars[i] = b
     end
 
-    -- Ambient animation loop. Runs while the window is alive; cheap math.
     task.spawn(function()
         local startT = tick()
         while card and card.Parent do
             local t = tick() - startT
             for i, b in ipairs(bars) do
                 local phase = i * 0.42
-                -- two summed sines for a more organic flow
+
                 local v = 0.5
                     + 0.32 * math.sin(t * 1.6 + phase)
                     + 0.12 * math.sin(t * 3.1 + phase * 1.7)
@@ -2872,15 +2763,13 @@ function Library:CreateWindow(cfg)
                 local h = math.floor(10 + v * 80)
                 b.Size = UDim2.fromOffset(BAR_W, h)
             end
-            -- breathe the live dot
+
             local pv = 0.5 + 0.5 * math.sin((tick() - startT) * 2.4)
             liveDot.BackgroundTransparency = 0.05 + (1 - pv) * 0.55
             RunService.Heartbeat:Wait()
         end
     end)
 
-    -- ── BOTTOM ROW ─────────────────────────────────────────────────────────
-    -- Discord (big primary CTA, matches reference layout)
     local discordCard = new("TextButton", {
         Position         = UDim2.fromOffset(PAD, yBot),
         Size             = UDim2.fromOffset(leftW, BOT_H),
@@ -2894,7 +2783,6 @@ function Library:CreateWindow(cfg)
     })
     corner(discordCard, 14)
 
-    -- gradient top→bottom on Discord card
     new("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, theme.AccentHi),
@@ -2940,10 +2828,8 @@ function Library:CreateWindow(cfg)
         })
     end)
 
-    -- Themes button + Close UI button (right side of bottom row)
     local botRightBtnW = math.floor((rightW - GAP) / 2)
 
-    -- ── Themes secondary card (opens dedicated themes view) ────────────────
     local themesBtn = new("TextButton", {
         Position         = UDim2.fromOffset(rightX, yBot),
         Size             = UDim2.fromOffset(botRightBtnW, BOT_H),
@@ -2984,7 +2870,6 @@ function Library:CreateWindow(cfg)
         Parent         = themesBtn,
     })
 
-    -- mini theme dot preview row at bottom of the themes button
     local themePreviewRow = new("Frame", {
         Position               = UDim2.fromOffset(14, BOT_H - 22),
         Size                   = UDim2.new(1, -28, 0, 12),
@@ -3024,7 +2909,6 @@ function Library:CreateWindow(cfg)
     end
     buildThemePreviewDots()
 
-    -- ── Close UI button ────────────────────────────────────────────────────
     local closeUiBtn = new("TextButton", {
         Position         = UDim2.fromOffset(rightX + botRightBtnW + GAP, yBot),
         Size             = UDim2.fromOffset(botRightBtnW, BOT_H),
@@ -3074,9 +2958,6 @@ function Library:CreateWindow(cfg)
         tween(closeUiBtnStroke, 0.12, { Color = theme.Stroke, Transparency = 0.4 })
     end)
 
-    -- ════════════════════════════════════════════════════════════════════════
-    -- THEMES VIEW (slides in from right when "Themes" is clicked)
-    -- ════════════════════════════════════════════════════════════════════════
     themesView = new("Frame", {
         Position         = UDim2.fromScale(1.05, 0),
         Size             = UDim2.fromScale(1, 1),
@@ -3091,7 +2972,7 @@ function Library:CreateWindow(cfg)
     corner(themesView, 18)
     local TV_PAD     = 14
     local TV_HEAD_H  = 56
-    -- Themes header (back arrow + title)
+
     local tvHeader = new("Frame", {
         Position               = UDim2.fromOffset(TV_PAD, TV_PAD),
         Size                   = UDim2.new(1, -TV_PAD * 2, 0, TV_HEAD_H),
@@ -3116,7 +2997,7 @@ function Library:CreateWindow(cfg)
     })
     corner(tvBackBtn, 10)
     local tvBackStroke = stroke(tvBackBtn, theme.Stroke, 1, 0.5)
-    -- give the icon a small inset so it doesn't touch the edges
+
     new("UIPadding", {
         PaddingTop    = UDim.new(0, 8),
         PaddingBottom = UDim.new(0, 8),
@@ -3150,7 +3031,6 @@ function Library:CreateWindow(cfg)
         Parent         = tvHeader,
     })
 
-    -- Themes grid container
     local tvGridY = TV_PAD + TV_HEAD_H + 8
     local tvGridH = innerH - tvGridY - TV_PAD
     local tvGridW = innerW
@@ -3183,7 +3063,6 @@ function Library:CreateWindow(cfg)
     local activeDashThemeName = (cfg.SettingsTabOptions and cfg.SettingsTabOptions.DefaultTheme) or "Light"
     local themeCardMap = {}
 
-    -- Build one preview card per preset. Each card "looks like" the theme it represents.
     local function buildThemeCard(tname)
         local preset = THEME_PRESETS[tname]
         local isActive = (tname == activeDashThemeName)
@@ -3199,11 +3078,11 @@ function Library:CreateWindow(cfg)
             Parent           = tvGrid,
         })
         corner(cardBtn, 12)
+        table.insert(themePreviewRoots, cardBtn)
         local stk = stroke(cardBtn,
             isActive and preset.Accent or preset.Stroke, isActive and 2 or 1,
             isActive and 0 or 0.4)
 
-        -- mini chrome preview: top "topbar" rect, side "sidebar" rect, accent line
         local miniTop = new("Frame", {
             Position               = UDim2.fromOffset(10, 10),
             Size                   = UDim2.new(1, -20, 0, 10),
@@ -3230,7 +3109,6 @@ function Library:CreateWindow(cfg)
             Parent                 = cardBtn,
         })
 
-        -- preview row of 3 stat cells
         local pRow = new("Frame", {
             Position               = UDim2.fromOffset(34, 32),
             Size                   = UDim2.new(1, -44, 0, tvCellH - 76),
@@ -3257,7 +3135,6 @@ function Library:CreateWindow(cfg)
             corner(pc, 4)
         end
 
-        -- name label at bottom
         new("TextLabel", {
             BackgroundTransparency = 1,
             AnchorPoint    = Vector2.new(0, 1),
@@ -3273,7 +3150,6 @@ function Library:CreateWindow(cfg)
             Parent         = cardBtn,
         })
 
-        -- active checkmark dot
         local check = new("Frame", {
             AnchorPoint      = Vector2.new(1, 0),
             Position         = UDim2.new(1, -10, 0, 10),
@@ -3302,7 +3178,7 @@ function Library:CreateWindow(cfg)
                 tween(sd.check, 0.18, { BackgroundTransparency = active and 0 or 1 })
             end
             applyThemeSelection(tname)
-            buildThemePreviewDots()  -- refresh themes-button preview dots
+            buildThemePreviewDots()
         end)
         cardBtn.MouseEnter:Connect(function()
             if tname == activeDashThemeName then return end
@@ -3318,7 +3194,6 @@ function Library:CreateWindow(cfg)
         buildThemeCard(tname)
     end
 
-    -- ── Open / close themes view ───────────────────────────────────────────
     local function openThemesView()
         if themesViewOpen then return end
         themesViewOpen = true
@@ -3364,7 +3239,6 @@ function Library:CreateWindow(cfg)
         tween(tvBackStroke, 0.12, { Color = theme.Stroke, Transparency = 0.5 })
     end)
 
-    -- ── Hero "Open" CTA ────────────────────────────────────────────────────
     local function dashGoFirstTab()
         for _, t in ipairs(Window.Tabs) do
             if not t.IsSettingsTab then Window:SelectTab(t) break end
@@ -3372,7 +3246,7 @@ function Library:CreateWindow(cfg)
     end
     dashEnterBtn.MouseButton1Down:Connect(function(x, y) ripple(dashEnterBtn, x, y, theme.AccentHi) end)
     dashEnterBtn.MouseButton1Click:Connect(function() dismissDashboard(dashGoFirstTab) end)
-    end) -- close dashboard bootstrap pcall
+    end)
     if not dashboardBootOk then
         dashboardVisible = false
         themesViewOpen = false
@@ -3391,9 +3265,6 @@ function Library:CreateWindow(cfg)
         end
         compatWarn("Dashboard disabled on this executor: " .. tostring(dashboardBootErr))
     end
-    -- ═══════════════════════════════════════════════════════════════════════
-    -- End dashboard overlay
-    -- ═══════════════════════════════════════════════════════════════════════
 
     local function exitMiniMode()
         if not Window.Minimized then return end
@@ -3479,8 +3350,7 @@ function Library:CreateWindow(cfg)
             if Window.Minimized then
                 exitMiniMode()
             end
-            -- Compatibility fallback: if dashboard subsystem failed to bootstrap
-            -- on this executor, route the gear button to Settings tab.
+
             if not (dashboardOverlay and dashboardOverlay.Parent) then
                 if not Window._settingsTab then
                     Window._settingsTabCreated = true
@@ -3493,7 +3363,7 @@ function Library:CreateWindow(cfg)
                 end
                 return
             end
-            -- Toggle dashboard: gear opens it; clicking again dismisses back to the active tab
+
             if dashboardVisible then
                 dismissDashboard(nil)
             else
@@ -3502,7 +3372,6 @@ function Library:CreateWindow(cfg)
         end)
     end
 
-    -- ── feature: UI hide/show keybind + programmatic toggle (mobile button, etc.) ──
     function Window:SetToggleKey(key)
         if typeof(key) == "EnumItem" then
             Window.ToggleKey = key
@@ -3513,7 +3382,7 @@ function Library:CreateWindow(cfg)
 
     local function toggleCanvasVisibility()
         if not canvas or not canvas.Parent then return end
-        -- High-FPS toggle with animation locking. No text scale changes.
+
         if Window.ToggleInFlight then return end
         Window.ToggleInFlight = true
         Window.ToggleAnimToken = (Window.ToggleAnimToken or 0) + 1
@@ -3574,7 +3443,7 @@ function Library:CreateWindow(cfg)
                 headerTabLabel.Text = ""
             end
         end
-        -- Keep the Vanta logo fixed; tab icons now render on the subline icon.
+
         titleLogo.Image = defaultLogoImg
         titleLogo.ImageRectOffset = Vector2.new(0, 0)
         titleLogo.ImageRectSize = Vector2.new(0, 0)
@@ -3718,8 +3587,10 @@ function Library:CreateWindow(cfg)
                     tween(t.Dot, 0.22, { BackgroundColor3 = theme.AccentHi })
                 end
                 if t.Icon then
+
                     t.Icon.Rotation = -10
-                    tween(t.Icon, 0.36, { Rotation = 0, ImageColor3 = theme.AccentDeep }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                    tween(t.Icon, 0.36, { Rotation = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                    tween(t.Icon, 0.22, { ImageColor3 = theme.AccentDeep })
                 end
                 task.spawn(function()
                     local mySeq = pulseSeq
@@ -3774,8 +3645,6 @@ function Library:CreateWindow(cfg)
         outS.Position = UDim2.fromScale(0, 0)
         inS.Position = UDim2.fromScale(dir, 0)
 
-        -- Do not UIScale-tween tab content: it scales all text and looks like fonts resizing.
-
         local swipeDur = 0.32
         local swipeStyle = Enum.EasingStyle.Quint
         local swipeDir = Enum.EasingDirection.Out
@@ -3813,7 +3682,6 @@ function Library:CreateWindow(cfg)
         twIn:Play()
     end
 
-    -- Resolve JumpTo target: Tab, searchable entry, flag string, or control name.
     local function resolveTarget(target)
         if not target then return nil end
         if type(target) == "table" then
@@ -3998,8 +3866,7 @@ function Library:CreateWindow(cfg)
                 applyFlagValue(flag, decodeConfigValue(encValue))
             end
         end
-        -- Ensure theme is applied immediately, even if the settings control
-        -- does not invoke callbacks during `Set`.
+
         local loadedTheme = sourceFlags["Vanta_Theme"]
         if type(loadedTheme) == "string" and loadedTheme ~= "" then
             applyTheme(loadedTheme, nil)
@@ -4007,8 +3874,6 @@ function Library:CreateWindow(cfg)
         return true, path
     end
 
-    -- Built-in Settings tab. Created automatically (deferred) unless cfg.SettingsTab == false,
-    -- so it lands AFTER all user tabs in sidebar order. Can also be invoked manually.
     function Window:CreateSettingsTab(sopts)
         sopts = sopts or {}
         local Tab = Window:CreateTab(sopts.Name or "Settings", sopts.Icon or "settings", {
@@ -4017,7 +3882,6 @@ function Library:CreateWindow(cfg)
         })
         Window._settingsTab = Tab
 
-        -- Hide the sidebar entry; the topbar gear button selects this tab instead.
         if Tab.Row then
             Tab.Row.Visible = false
         elseif Tab.Button then
@@ -4187,13 +4051,11 @@ function Library:CreateWindow(cfg)
                     Target = function()
                         Window:OpenSearch()
                     end,
-                    Badge = "TIP",
                 },
                 {
                     Title = "Theme preset",
                     Description = "Jump straight to the theme dropdown in Appearance.",
                     Target = "Vanta_Theme",
-                    Badge = "NEW",
                 },
             },
         })
@@ -4330,7 +4192,7 @@ function Library:CreateWindow(cfg)
             BackgroundTransparency = 1,
             Position = UDim2.fromOffset(tabIcon and 36 or 30, 0),
             Size = UDim2.new(1, -(tabIcon and 42 or 36), 1, 0),
-            Font = Enum.Font.GothamMedium,
+            Font = Enum.Font.GothamBold,
             TextSize = 13,
             TextColor3 = theme.SubText,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -4405,6 +4267,31 @@ function Library:CreateWindow(cfg)
         Tab.PageShell = pageShell
         Tab.TabStroke = tabStroke
         Tab.TabGrad = tabGrad
+
+        registerThemeRefresher(function()
+            local active = (Window.ActiveTab == Tab)
+            if tabGrad then
+                if active then
+                    setGlassGradient(tabGrad, theme.GlassTabActiveLite, theme.GlassTabActiveMid, theme.GlassTabActiveDeep)
+                else
+                    setGlassGradient(tabGrad, theme.GlassTabInactiveLite, theme.GlassTabInactiveMid, theme.GlassTabInactiveDeep)
+                end
+            end
+            if tabStroke then
+                tabStroke.Color        = active and theme.GlassRimHi or theme.GlassRim
+                tabStroke.Transparency = active and 0.1 or 0.42
+            end
+            tabBtn.BackgroundTransparency = active and 0.26 or 0.52
+            if tabLbl then
+                tabLbl.TextColor3 = active and theme.AccentDeep or theme.SubText
+            end
+            if dot then
+                dot.BackgroundColor3 = active and theme.AccentHi or theme.Muted
+            end
+            if tabIcon then
+                tabIcon.ImageColor3 = active and theme.AccentDeep or theme.SubText
+            end
+        end)
 
         table.insert(Window.Tabs, Tab)
         if _opts.AutoSelect ~= false and not Window.ActiveTab then Window:SelectTab(Tab) end
@@ -4481,7 +4368,7 @@ function Library:CreateWindow(cfg)
             local lbl = new("TextLabel", {
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, 0, 22),
-                Font = Enum.Font.GothamBold,
+                Font = Enum.Font.GothamBlack,
                 TextSize = 12,
                 TextColor3 = theme.AccentHi,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -4517,7 +4404,7 @@ function Library:CreateWindow(cfg)
             local lbl = new("TextLabel", {
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 Size = UDim2.new(1, -8, 0, 38),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -4592,7 +4479,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 0),
                 Size = UDim2.new(1, -42, 1, 0),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -4656,7 +4543,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 0),
                 Size = UDim2.new(1, -74, 1, 0),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -4739,7 +4626,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 8),
                 Size = UDim2.new(1, -76, 0, 18),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -4975,7 +4862,7 @@ function Library:CreateWindow(cfg)
                         BackgroundTransparency = isSel and 0 or 1,
                         Size = UDim2.new(1, 0, 0, OPT_H),
                         Text = "   " .. opt .. (isSel and "   \u{2713}" or ""),
-                        Font = Enum.Font.GothamMedium,
+                        Font = Enum.Font.GothamBold,
                         TextSize = 12,
                         TextColor3 = theme.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
@@ -5129,7 +5016,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 24),
                 Size = UDim2.new(1, -32, 0, 22),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 PlaceholderText = opts.PlaceholderText or "",
@@ -5190,7 +5077,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 0),
                 Size = UDim2.new(1, -116, 1, 0),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -5289,7 +5176,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(16, 0),
                 Size = UDim2.new(1, -64, 0, COLLAPSED_H),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -5491,7 +5378,6 @@ function Library:CreateWindow(cfg)
             return obj
         end
 
-        -- What's New: cards that jump to a tab, flag, named control, or run a callback.
         function Tab:CreateWhatsNew(opts)
             opts = opts or {}
             local api = {}
@@ -5524,31 +5410,20 @@ function Library:CreateWindow(cfg)
                     stroke(accentBar, theme.AccentHi, 1, 0.62)
                 end
 
-                local badgeText = it.Badge or (clickable and "NEW" or "SOON")
-                local badge = new("Frame", {
-                    Position = UDim2.fromOffset(14, 10),
-                    Size = UDim2.fromOffset(46, 16),
+                local dot = new("Frame", {
+                    AnchorPoint = Vector2.new(1, 0),
+                    Position = UDim2.new(1, -14, 0, 14),
+                    Size = UDim2.fromOffset(6, 6),
                     BackgroundColor3 = clickable and theme.AccentHi or theme.Muted,
-                    BackgroundTransparency = 0.78,
                     BorderSizePixel = 0,
                     Parent = row,
                 })
-                corner(badge, 8)
-                stroke(badge, clickable and theme.AccentHi or theme.Muted, 1, clickable and 0.55 or 0.75)
-                local badgeLbl = new("TextLabel", {
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromScale(1, 1),
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 9,
-                    TextColor3 = clickable and theme.AccentDeep or theme.SubText,
-                    Text = badgeText,
-                    Parent = badge,
-                })
+                corner(dot, 999)
 
                 local wTitle = new("TextLabel", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(70, 6),
-                    Size = UDim2.new(1, -90, 0, 22),
+                    Position = UDim2.fromOffset(20, 6),
+                    Size = UDim2.new(1, -56, 0, 22),
                     Font = Enum.Font.GothamBold,
                     TextSize = 13,
                     TextColor3 = theme.Text,
@@ -5561,8 +5436,8 @@ function Library:CreateWindow(cfg)
 
                 local wDesc = new("TextLabel", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(70, 30),
-                    Size = UDim2.new(1, -90, 0, 22),
+                    Position = UDim2.fromOffset(20, 30),
+                    Size = UDim2.new(1, -56, 0, 22),
                     Font = Enum.Font.Gotham,
                     TextSize = 11,
                     TextColor3 = theme.SubText,
@@ -5621,9 +5496,6 @@ function Library:CreateWindow(cfg)
         return Tab
     end
 
-    -- ══════════════════════════════════════════════════════════════════
-    --  Search overlay  —  ; to open, Esc to dismiss
-    -- ══════════════════════════════════════════════════════════════════
     local searchBootOk, searchBootErr = pcall(function()
         local searchVisible = false
         local searchAnimToken = 0
@@ -5685,7 +5557,7 @@ function Library:CreateWindow(cfg)
             ZIndex = 82,
             Parent = panel,
         })
-        -- Match panel corner radius so the search chrome reads as one rounded shell (top no longer looks square).
+
         corner(header, 14)
         new("Frame", {
             Position = UDim2.new(0, 0, 1, -1),
@@ -5731,7 +5603,7 @@ function Library:CreateWindow(cfg)
             BackgroundTransparency = 1,
             Position = UDim2.fromOffset(46, 0),
             Size = UDim2.new(1, -130, 1, 0),
-            Font = Enum.Font.GothamMedium,
+            Font = Enum.Font.GothamBold,
             TextSize = 15,
             TextColor3 = theme.Text,
             PlaceholderText = "Search features, toggles, sections...",
@@ -5909,7 +5781,7 @@ function Library:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(28, 4),
                 Size = UDim2.new(1, -68, 0, 20),
-                Font = Enum.Font.GothamMedium,
+                Font = Enum.Font.GothamBold,
                 TextSize = 13,
                 TextColor3 = theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -6043,11 +5915,6 @@ function Library:CreateWindow(cfg)
 
         input:GetPropertyChangedSignal("Text"):Connect(queueRefresh)
 
-        -- Modern minimalist open/close: subtle 8px translate + fade only.
-        -- The previous version tweened panelScale, which visibly resized
-        -- every TextLabel inside the panel during the animation — that's
-        -- the "font changing size" effect. We now keep panelScale locked
-        -- at 1 throughout, and rely on Quart easing for a soft, snappy feel.
         local PANEL_REST_Y = 70
         local PANEL_OFF_Y  = 78
 
@@ -6120,7 +5987,6 @@ function Library:CreateWindow(cfg)
 
         backdrop.MouseButton1Click:Connect(closeSearch)
 
-        -- Compact sidebar hint (pill matches tabs; avoids empty row / glow bleed from hidden tabs).
         local searchHintWrap = new("Frame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -6147,7 +6013,7 @@ function Library:CreateWindow(cfg)
         new("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
-            Font = Enum.Font.GothamMedium,
+            Font = Enum.Font.GothamBold,
             TextSize = 10,
             TextColor3 = theme.Muted,
             Text = "Press ; to search.",
@@ -6203,8 +6069,6 @@ function Library:CreateWindow(cfg)
         compatWarn("Search disabled on this executor: " .. tostring(searchBootErr))
     end
 
-    -- Auto-add Settings tab after user tabs (task.defer fires when caller yields/finishes,
-    -- so it lands at the end of the sidebar). Pass cfg.SettingsTab = false to opt out.
     if cfg.SettingsTab ~= false then
         task.defer(function()
             if Window and not Window._settingsTabCreated then
@@ -6258,7 +6122,6 @@ function Library:Notify(opts)
         Parent = notifGui,
     })
 
-    -- Rounded masks keep the blur/glow from rendering square at the bottom corners.
     local shadowMask = new("Frame", {
         Position = UDim2.fromOffset(-22, -22),
         Size = UDim2.new(1, 44, 1, 44),
