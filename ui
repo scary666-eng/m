@@ -6116,21 +6116,21 @@ function Library:Notify(opts)
     local theme = THEME
     local holder = new("Frame", {
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -20, 0, 20 + (#notifStack * 96)),
-        Size = UDim2.fromOffset(320, 84),
+        Position = UDim2.new(1, -20, 0, 20 + (#notifStack * 88)),
+        Size = UDim2.fromOffset(312, 78),
         BackgroundTransparency = 1,
         Parent = notifGui,
     })
 
     local shadowMask = new("Frame", {
-        Position = UDim2.fromOffset(-22, -22),
-        Size = UDim2.new(1, 44, 1, 44),
+        Position = UDim2.fromOffset(-16, -16),
+        Size = UDim2.new(1, 32, 1, 32),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = holder,
     })
-    corner(shadowMask, 24)
+    corner(shadowMask, 20)
     local notifShadow = new("ImageLabel", {
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
@@ -6143,19 +6143,19 @@ function Library:Notify(opts)
     })
 
     local glowMask = new("Frame", {
-        Position = UDim2.fromOffset(-14, -14),
-        Size = UDim2.new(1, 28, 1, 28),
+        Position = UDim2.fromOffset(-10, -10),
+        Size = UDim2.new(1, 20, 1, 20),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = holder,
     })
-    corner(glowMask, 20)
+    corner(glowMask, 18)
     local notifGlow = new("ImageLabel", {
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
         Image = SHADOW_ASSET,
-        ImageColor3 = theme.Accent,
+        ImageColor3 = theme.GlassRim,
         ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = SHADOW_SLICE,
@@ -6164,19 +6164,42 @@ function Library:Notify(opts)
 
     local card = new("Frame", {
         Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = theme.Card,
+        BackgroundColor3 = theme.CardTop,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = holder,
     })
     corner(card, 14)
-    local cs = stroke(card, theme.Accent, 1, 1)
+    local cs = select(1, applyLiquidGlass(card, theme, 14, 0.58))
+    card.BackgroundTransparency = 1
+
+    local frost = new("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = card,
+    })
+    corner(frost, 14)
+    new("UIGradient", {
+        Rotation = -28,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(232, 238, 248)),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.74),
+            NumberSequenceKeypoint.new(0.45, 0.82),
+            NumberSequenceKeypoint.new(1, 0.9),
+        }),
+        Parent = frost,
+    })
 
     local bar = new("Frame", {
-        Size = UDim2.fromOffset(3, 0),
+        Size = UDim2.fromOffset(2, 0),
         Position = UDim2.fromOffset(8, 10),
-        BackgroundColor3 = theme.Accent,
+        BackgroundColor3 = theme.GlassRim,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Parent = card,
@@ -6187,8 +6210,8 @@ function Library:Notify(opts)
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(16, 12),
         Size = UDim2.new(1, -32, 0, 18),
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
         TextColor3 = theme.Text,
         TextTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -6200,7 +6223,7 @@ function Library:Notify(opts)
         Position = UDim2.fromOffset(16, 34),
         Size = UDim2.new(1, -32, 0, 38),
         Font = Enum.Font.Gotham,
-        TextSize = 12,
+        TextSize = 11,
         TextColor3 = theme.SubText,
         TextTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -6212,16 +6235,19 @@ function Library:Notify(opts)
 
     table.insert(notifStack, holder)
 
-    tween(card, 0.25, {BackgroundTransparency = 0})
-    tween(cs,   0.25, {Transparency = 0.4})
-    tween(notifShadow, 0.3, {ImageTransparency = 0.4})
-    tween(notifGlow,   0.3, {ImageTransparency = 0.65})
-    tween(bar,  0.25, {Size = UDim2.new(0, 2, 1, -20), BackgroundTransparency = 0})
+    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.12, 0, 0.82)
+    tween(card, 0.25, {BackgroundTransparency = targetCardTransparency})
+    tween(frost, 0.25, {BackgroundTransparency = 0.08})
+    tween(cs,   0.25, {Transparency = 0.58})
+    tween(notifShadow, 0.3, {ImageTransparency = 0.72})
+    tween(notifGlow,   0.3, {ImageTransparency = 0.9})
+    tween(bar,  0.25, {Size = UDim2.new(0, 2, 1, -20), BackgroundTransparency = 0.45})
     tween(ttl,  0.25, {TextTransparency = 0})
     tween(body, 0.3,  {TextTransparency = 0})
 
     task.delay(opts.Duration or 4, function()
         tween(card, 0.25, {BackgroundTransparency = 1})
+        tween(frost, 0.25, {BackgroundTransparency = 1})
         tween(cs,   0.25, {Transparency = 1})
         tween(notifShadow, 0.25, {ImageTransparency = 1})
         tween(notifGlow,   0.25, {ImageTransparency = 1})
@@ -6234,7 +6260,7 @@ function Library:Notify(opts)
             end
             holder:Destroy()
             for i, c in ipairs(notifStack) do
-                tween(c, 0.2, {Position = UDim2.new(1, -20, 0, 20 + ((i-1) * 96))})
+                tween(c, 0.2, {Position = UDim2.new(1, -20, 0, 20 + ((i-1) * 88))})
             end
         end)
     end)
