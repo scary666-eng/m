@@ -6095,6 +6095,9 @@ end
 local notifStack = {}
 function Library:Notify(opts)
     opts = opts or {}
+    local notifTitle = tostring(opts.Title or "Notification")
+    notifTitle = notifTitle:gsub("vanta%.dev", "Vanta")
+    notifTitle = notifTitle:gsub("Vanta%.dev", "Vanta")
     local notifGui
     for _, host in ipairs(collectGuiHosts()) do
         local existing = host:FindFirstChild("VantaNotifs")
@@ -6205,7 +6208,7 @@ function Library:Notify(opts)
         TextColor3 = theme.Text,
         TextTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Text = opts.Title or "Notification",
+        Text = notifTitle,
         Parent = card,
     })
     local body = new("TextLabel", {
