@@ -6115,8 +6115,8 @@ function Library:Notify(opts)
 
     local theme = THEME
     local holder = new("Frame", {
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -20, 0, 20 + (#notifStack * 88)),
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 20, 1, -20 - (#notifStack * 88)),
         Size = UDim2.fromOffset(312, 78),
         BackgroundTransparency = 1,
         Parent = notifGui,
@@ -6196,16 +6196,6 @@ function Library:Notify(opts)
         Parent = frost,
     })
 
-    local bar = new("Frame", {
-        Size = UDim2.fromOffset(2, 0),
-        Position = UDim2.fromOffset(8, 10),
-        BackgroundColor3 = theme.GlassRim,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = card,
-    })
-    corner(bar, 999)
-
     local ttl = new("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(16, 12),
@@ -6241,7 +6231,6 @@ function Library:Notify(opts)
     tween(cs,   0.25, {Transparency = 0.58})
     tween(notifShadow, 0.3, {ImageTransparency = 0.72})
     tween(notifGlow,   0.3, {ImageTransparency = 0.9})
-    tween(bar,  0.25, {Size = UDim2.new(0, 2, 1, -20), BackgroundTransparency = 0.45})
     tween(ttl,  0.25, {TextTransparency = 0})
     tween(body, 0.3,  {TextTransparency = 0})
 
@@ -6251,7 +6240,6 @@ function Library:Notify(opts)
         tween(cs,   0.25, {Transparency = 1})
         tween(notifShadow, 0.25, {ImageTransparency = 1})
         tween(notifGlow,   0.25, {ImageTransparency = 1})
-        tween(bar,  0.25, {BackgroundTransparency = 1})
         tween(ttl,  0.25, {TextTransparency = 1})
         local t = tween(body, 0.25, {TextTransparency = 1})
         t.Completed:Connect(function()
@@ -6260,7 +6248,7 @@ function Library:Notify(opts)
             end
             holder:Destroy()
             for i, c in ipairs(notifStack) do
-                tween(c, 0.2, {Position = UDim2.new(1, -20, 0, 20 + ((i-1) * 88))})
+                tween(c, 0.2, {Position = UDim2.new(0, 20, 1, -20 - ((i-1) * 88))})
             end
         end)
     end)
