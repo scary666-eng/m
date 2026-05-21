@@ -836,12 +836,14 @@ local function iconFromAssetId(id)
 end
 
 local NOTIF_SOUND_MAP = {
+    ["None"] = false,
     ["Notif. Sound 1"] = "rbxassetid://120992224916853",
     ["Notif. Sound 2"] = "rbxassetid://106553517979212",
     ["Notif. Sound 3"] = "rbxassetid://96973825311570",
     ["Notif. Sound 4"] = "rbxassetid://71316035923166",
 }
 local NOTIF_SOUND_OPTIONS = {
+    "None",
     "Notif. Sound 1",
     "Notif. Sound 2",
     "Notif. Sound 3",
@@ -1210,7 +1212,7 @@ function Library:CreateWindow(cfg)
     })
     local windowFrameScale = Instance.new("UIScale")
     windowFrameScale.Name = "WindowFrameScale"
-    windowFrameScale.Scale = 0.965
+    windowFrameScale.Scale = 0.90
     windowFrameScale.Parent = windowFrame
 
     local glow = new("ImageLabel", {
@@ -2194,19 +2196,20 @@ function Library:CreateWindow(cfg)
     local function applyNotificationSound()
         local selected = Library.Flags["Vanta_NotificationSound"]
         if type(selected) == "table" then selected = selected[1] end
-        if type(selected) == "string" and NOTIF_SOUND_MAP[selected] then
+        if type(selected) == "string" and NOTIF_SOUND_MAP[selected] ~= nil then
             notifSoundChoice = selected
         end
     end
     local function playNotificationSound()
         if Library.Flags["Vanta_Sounds"] == false then return end
+        if notifSoundChoice == "None" then return end
         local sid = NOTIF_SOUND_MAP[notifSoundChoice] or NOTIF_SOUND_MAP["Notif. Sound 1"]
         if not sid then return end
         local ok, snd = pcall(function()
             local s = Instance.new("Sound")
             s.Name = "VantaNotifSound"
             s.SoundId = sid
-            s.Volume = 0.55
+            s.Volume = 0.85
             s.PlayOnRemove = true
             s.Parent = hostGui()
             return s
@@ -3996,34 +3999,29 @@ function Library:CreateWindow(cfg)
         for k in pairs(THEME_PRESETS) do presetNames[#presetNames + 1] = k end
         table.sort(presetNames)
 
-        local appearanceRows = {}
-        local function trackAppearanceRow(ref)
-            if ref then table.insert(appearanceRows, ref) end
-            return ref
-        end
-
         Tab:CreateSection("Appearance")
 
-        local themePresetRef = trackAppearanceRow(Tab:CreateDropdown({
+        local themePresetRef = Tab:CreateDropdown({
             Name = "Theme preset",
             Options = presetNames,
             CurrentOption = sopts.DefaultTheme or "Light",
             Flag = "Vanta_Theme",
             Callback = function(v) applyThemeSelection(v, true) end,
-        }))
+        })
 
-        local customThemeRowRefs = {}
         local customThemeSyncing = false
-        local function trackCustomThemeRow(ref)
-            if ref then table.insert(customThemeRowRefs, ref) end
-            return ref
+        local customMainRef, customBackgroundRef, customCardRef, customTopbarRef, customSidebarRef, customTextRef, customSubtextRef, customStrokeRef
+        local function syncCustomThemePickerViews()
+            pcall(function() if customMainRef then customMainRef:Set(customThemeColors.Main) end end)
+            pcall(function() if customBackgroundRef then customBackgroundRef:Set(customThemeColors.Background) end end)
+            pcall(function() if customCardRef then customCardRef:Set(customThemeColors.Card) end end)
+            pcall(function() if customTopbarRef then customTopbarRef:Set(customThemeColors.TopBar) end end)
+            pcall(function() if customSidebarRef then customSidebarRef:Set(customThemeColors.Sidebar) end end)
+            pcall(function() if customTextRef then customTextRef:Set(customThemeColors.Text) end end)
+            pcall(function() if customSubtextRef then customSubtextRef:Set(customThemeColors.SubText) end end)
+            pcall(function() if customStrokeRef then customStrokeRef:Set(customThemeColors.Stroke) end end)
         end
-        local function setCustomThemeRowsEnabled(on)
-            for _, ref in ipairs(customThemeRowRefs) do
-                pcall(function()
-                    ref:SetInteractable(on)
-                end)
-            end
+        local function setCustomThemeRowsEnabled(_on)
         end
         local function applyCustomThemeNow(shouldSave)
             if customThemeSyncing then return end
@@ -4031,110 +4029,136 @@ function Library:CreateWindow(cfg)
             applyThemeSelection(selectedTheme, shouldSave ~= false)
         end
 
-        trackAppearanceRow(Tab:CreateToggle({
+        Tab:CreateToggle({
             Name = "Custom Theme",
             CurrentValue = false,
             Flag = "Vanta_CustomTheme",
             Callback = function(on)
                 customThemeEnabled = on and true or false
                 setCustomThemeRowsEnabled(customThemeEnabled)
+                syncCustomThemePickerViews()
                 applyCustomThemeNow(true)
             end,
-        }))
+        })
 
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        customMainRef = Tab:CreateColorPicker({
             Name = "Main color",
             Color = theme.Accent,
             Flag = "Vanta_Custom_Main",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Main = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customBackgroundRef = Tab:CreateColorPicker({
             Name = "Background color",
             Color = theme.Background,
             Flag = "Vanta_Custom_Background",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Background = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customCardRef = Tab:CreateColorPicker({
             Name = "Card color",
             Color = theme.Card,
             Flag = "Vanta_Custom_Card",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Card = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customTopbarRef = Tab:CreateColorPicker({
             Name = "Topbar color",
             Color = theme.TopBar,
             Flag = "Vanta_Custom_TopBar",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.TopBar = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customSidebarRef = Tab:CreateColorPicker({
             Name = "Sidebar color",
             Color = theme.Sidebar,
             Flag = "Vanta_Custom_Sidebar",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Sidebar = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customTextRef = Tab:CreateColorPicker({
             Name = "Text color",
             Color = theme.Text,
             Flag = "Vanta_Custom_Text",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Text = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customSubtextRef = Tab:CreateColorPicker({
             Name = "Subtext color",
             Color = theme.SubText,
             Flag = "Vanta_Custom_SubText",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.SubText = c
                 applyCustomThemeNow(true)
             end,
-        })))
-        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+        })
+        customStrokeRef = Tab:CreateColorPicker({
             Name = "Stroke color",
             Color = theme.Stroke,
             Flag = "Vanta_Custom_Stroke",
             Callback = function(c)
-                if not customThemeEnabled then return end
+                if not customThemeEnabled then
+                    syncCustomThemePickerViews()
+                    return
+                end
                 customThemeColors.Stroke = c
                 applyCustomThemeNow(true)
             end,
-        })))
+        })
         setCustomThemeRowsEnabled(false)
+        syncCustomThemePickerViews()
 
-        trackAppearanceRow(Tab:CreateSlider({
+        Tab:CreateSlider({
             Name = "UI scale",
             Range = { 70, 130 },
             Increment = 5,
             Suffix = "%",
-            CurrentValue = 100,
+            CurrentValue = 90,
             Flag = "Vanta_UIScale",
             Callback = function(v) windowFrameScale.Scale = v / 100 end,
-        }))
+        })
 
-        trackAppearanceRow(Tab:CreateSlider({
+        Tab:CreateSlider({
             Name = "Window opacity",
             Range = { 60, 100 },
             Increment = 5,
@@ -4146,18 +4170,18 @@ function Library:CreateWindow(cfg)
                 tween(card,   0.18, { BackgroundTransparency = t })
                 tween(cardBg, 0.18, { BackgroundTransparency = t })
             end,
-        }))
+        })
 
-        trackAppearanceRow(Tab:CreateToggle({
+        Tab:CreateToggle({
             Name = "Background glow",
             CurrentValue = true,
             Flag = "Vanta_Glow",
             Callback = function(on)
                 tween(glow, 0.25, { ImageTransparency = on and 0 or 1 })
             end,
-        }))
+        })
 
-        trackAppearanceRow(Tab:CreateToggle({
+        Tab:CreateToggle({
             Name = "Background orbs",
             CurrentValue = true,
             Flag = "Vanta_Orbs",
@@ -4165,19 +4189,19 @@ function Library:CreateWindow(cfg)
                 contentOrb.Visible  = on
                 contentOrb2.Visible = on
             end,
-        }))
+        })
 
-        trackAppearanceRow(Tab:CreateToggle({
+        Tab:CreateToggle({
             Name = "Top-bar accent line",
             CurrentValue = true,
             Flag = "Vanta_Sheen",
             Callback = function(on)
                 sheen.Visible = on
             end,
-        }))
+        })
 
-        trackAppearanceRow(Tab:CreateSection("Notifications"))
-        trackAppearanceRow(Tab:CreateDropdown({
+        Tab:CreateSection("Notifications")
+        local notifStyleRef = Tab:CreateDropdown({
             Name = "Notification style",
             Options = { "Theme Glass", "Solid", "Minimal" },
             CurrentOption = "Theme Glass",
@@ -4190,22 +4214,22 @@ function Library:CreateWindow(cfg)
                 notifStylePreset = picked
                 queueThemeAutoSave()
             end,
-        }))
-        trackAppearanceRow(Tab:CreateDropdown({
+        })
+        local notifSoundRef = Tab:CreateDropdown({
             Name = "Notification sound",
             Options = NOTIF_SOUND_OPTIONS,
             CurrentOption = "Notif. Sound 1",
             Flag = "Vanta_NotificationSound",
             Callback = function(v)
                 local picked = type(v) == "table" and (v[1] or "Notif. Sound 1") or (v or "Notif. Sound 1")
-                if not NOTIF_SOUND_MAP[picked] then
+                if NOTIF_SOUND_MAP[picked] == nil then
                     picked = "Notif. Sound 1"
                 end
                 notifSoundChoice = picked
                 queueThemeAutoSave()
             end,
-        }))
-        trackAppearanceRow(Tab:CreateButton({
+        })
+        Tab:CreateButton({
             Name = "Reset all theme customization",
             Callback = function()
                 customThemeSyncing = true
@@ -4239,7 +4263,7 @@ function Library:CreateWindow(cfg)
                 pcall(function() applyFlagValue("Vanta_Custom_Stroke", defaultStroke) end)
                 pcall(function() applyFlagValue("Vanta_NotificationStyle", "Theme Glass") end)
                 pcall(function() applyFlagValue("Vanta_NotificationSound", "Notif. Sound 1") end)
-                pcall(function() applyFlagValue("Vanta_UIScale", 100) end)
+                pcall(function() applyFlagValue("Vanta_UIScale", 90) end)
                 pcall(function() applyFlagValue("Vanta_Opacity", 100) end)
                 pcall(function() applyFlagValue("Vanta_Glow", true) end)
                 pcall(function() applyFlagValue("Vanta_Orbs", true) end)
@@ -4248,7 +4272,10 @@ function Library:CreateWindow(cfg)
                 notifSoundChoice = "Notif. Sound 1"
                 customThemeSyncing = false
                 setCustomThemeRowsEnabled(false)
+                syncCustomThemePickerViews()
                 applyThemeSelection(sopts.DefaultTheme or "Light", false)
+                pcall(function() if notifStyleRef then notifStyleRef:Set("Theme Glass") end end)
+                pcall(function() if notifSoundRef then notifSoundRef:Set("Notif. Sound 1") end end)
                 queueThemeAutoSave()
                 Library:Notify({
                     Title = "Vanta",
@@ -4256,7 +4283,7 @@ function Library:CreateWindow(cfg)
                     Duration = 3,
                 })
             end,
-        }))
+        })
 
         task.defer(function()
             customThemeSyncing = true
