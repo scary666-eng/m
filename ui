@@ -835,6 +835,19 @@ local function iconFromAssetId(id)
     }
 end
 
+local NOTIF_SOUND_MAP = {
+    ["Notif. Sound 1"] = "rbxassetid://120992224916853",
+    ["Notif. Sound 2"] = "rbxassetid://106553517979212",
+    ["Notif. Sound 3"] = "rbxassetid://96973825311570",
+    ["Notif. Sound 4"] = "rbxassetid://71316035923166",
+}
+local NOTIF_SOUND_OPTIONS = {
+    "Notif. Sound 1",
+    "Notif. Sound 2",
+    "Notif. Sound 3",
+    "Notif. Sound 4",
+}
+
 local function resolveIcon(name)
     if not name then return nil end
     if type(name) ~= "string" then name = tostring(name) end
@@ -1910,13 +1923,20 @@ function Library:CreateWindow(cfg)
         }
     end
 
-    local function applyTheme(presetName, accentColor)
+    local function applyTheme(presetName, accentColor, extraOverrides)
         local newTheme = {}
         for k, v in pairs(lastTheme) do newTheme[k] = v end
         local preset = presetName and THEME_PRESETS[presetName]
         if preset then for k, v in pairs(preset) do newTheme[k] = v end end
         if accentColor then
             for k, v in pairs(deriveAccentRamp(accentColor)) do newTheme[k] = v end
+        end
+        if type(extraOverrides) == "table" then
+            for k, v in pairs(extraOverrides) do
+                if typeof(v) == "Color3" or type(v) == "number" or type(v) == "boolean" or type(v) == "string" then
+                    newTheme[k] = v
+                end
+            end
         end
 
         local remap = {}
@@ -2158,11 +2178,72 @@ function Library:CreateWindow(cfg)
             end)
         end)
     end
-    local function applyThemeSelection(themeName)
+    local customThemeEnabled = false
+    local customThemeColors = {
+        Main       = theme.Accent,
+        Background = theme.Background,
+        Card       = theme.Card,
+        TopBar     = theme.TopBar,
+        Sidebar    = theme.Sidebar,
+        Text       = theme.Text,
+        SubText    = theme.SubText,
+        Stroke     = theme.Stroke,
+    }
+    local notifStylePreset = "Theme Glass"
+    local notifSoundChoice = "Notif. Sound 1"
+    local function applyNotificationSound()
+        local selected = Library.Flags["Vanta_NotificationSound"]
+        if type(selected) == "table" then selected = selected[1] end
+        if type(selected) == "string" and NOTIF_SOUND_MAP[selected] then
+            notifSoundChoice = selected
+        end
+    end
+    local function playNotificationSound()
+        if Library.Flags["Vanta_Sounds"] == false then return end
+        local sid = NOTIF_SOUND_MAP[notifSoundChoice] or NOTIF_SOUND_MAP["Notif. Sound 1"]
+        if not sid then return end
+        local ok, snd = pcall(function()
+            local s = Instance.new("Sound")
+            s.Name = "VantaNotifSound"
+            s.SoundId = sid
+            s.Volume = 0.55
+            s.PlayOnRemove = true
+            s.Parent = hostGui()
+            return s
+        end)
+        if ok and snd then
+            pcall(function() snd:Destroy() end)
+        end
+    end
+    local function buildCustomThemeOverrides()
+        if not customThemeEnabled then return nil end
+        local overrides = {
+            Background = customThemeColors.Background,
+            Card       = customThemeColors.Card,
+            TopBar     = customThemeColors.TopBar,
+            Sidebar    = customThemeColors.Sidebar,
+            Text       = customThemeColors.Text,
+            SubText    = customThemeColors.SubText,
+            Stroke     = customThemeColors.Stroke,
+        }
+        local main = customThemeColors.Main
+        if typeof(main) == "Color3" then
+            local ramp = deriveAccentRamp(main)
+            for k, v in pairs(ramp) do
+                overrides[k] = v
+            end
+        end
+        return overrides
+    end
+    local function applyThemeSelection(themeName, shouldSave)
         if type(themeName) ~= "string" or themeName == "" then return end
-        applyTheme(themeName, nil)
+        local overrides = buildCustomThemeOverrides()
+        applyTheme(themeName, nil, overrides)
         Library.Flags["Vanta_Theme"] = themeName
-        queueThemeAutoSave()
+        Library.Flags["Vanta_CustomTheme"] = customThemeEnabled
+        if shouldSave ~= false then
+            queueThemeAutoSave()
+        end
     end
 
     local tabSwipeTweens = {}
@@ -3886,6 +3967,14 @@ function Library:CreateWindow(cfg)
         if type(loadedTheme) == "string" and loadedTheme ~= "" then
             applyTheme(loadedTheme, nil)
         end
+        do
+            local ns = sourceFlags["Vanta_NotificationStyle"]
+            if type(ns) == "table" then ns = ns[1] end
+            if ns == "Theme Glass" or ns == "Solid" or ns == "Minimal" then
+                notifStylePreset = ns
+            end
+            applyNotificationSound()
+        end
         return true, path
     end
 
@@ -3907,24 +3996,135 @@ function Library:CreateWindow(cfg)
         for k in pairs(THEME_PRESETS) do presetNames[#presetNames + 1] = k end
         table.sort(presetNames)
 
+        local appearanceRows = {}
+        local function trackAppearanceRow(ref)
+            if ref then table.insert(appearanceRows, ref) end
+            return ref
+        end
+
         Tab:CreateSection("Appearance")
 
-        Tab:CreateDropdown({
+        local themePresetRef = trackAppearanceRow(Tab:CreateDropdown({
             Name = "Theme preset",
             Options = presetNames,
             CurrentOption = sopts.DefaultTheme or "Light",
             Flag = "Vanta_Theme",
-            Callback = function(v) applyThemeSelection(v) end,
-        })
+            Callback = function(v) applyThemeSelection(v, true) end,
+        }))
 
-        Tab:CreateColorPicker({
-            Name = "Accent color",
+        local customThemeRowRefs = {}
+        local customThemeSyncing = false
+        local function trackCustomThemeRow(ref)
+            if ref then table.insert(customThemeRowRefs, ref) end
+            return ref
+        end
+        local function setCustomThemeRowsEnabled(on)
+            for _, ref in ipairs(customThemeRowRefs) do
+                pcall(function()
+                    ref:SetInteractable(on)
+                end)
+            end
+        end
+        local function applyCustomThemeNow(shouldSave)
+            if customThemeSyncing then return end
+            local selectedTheme = Library.Flags["Vanta_Theme"] or (sopts.DefaultTheme or "Light")
+            applyThemeSelection(selectedTheme, shouldSave ~= false)
+        end
+
+        trackAppearanceRow(Tab:CreateToggle({
+            Name = "Custom Theme",
+            CurrentValue = false,
+            Flag = "Vanta_CustomTheme",
+            Callback = function(on)
+                customThemeEnabled = on and true or false
+                setCustomThemeRowsEnabled(customThemeEnabled)
+                applyCustomThemeNow(true)
+            end,
+        }))
+
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Main color",
             Color = theme.Accent,
-            Flag = "Vanta_Accent",
-            Callback = function(c) scheduleAccentTheme(c) end,
-        })
+            Flag = "Vanta_Custom_Main",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Main = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Background color",
+            Color = theme.Background,
+            Flag = "Vanta_Custom_Background",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Background = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Card color",
+            Color = theme.Card,
+            Flag = "Vanta_Custom_Card",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Card = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Topbar color",
+            Color = theme.TopBar,
+            Flag = "Vanta_Custom_TopBar",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.TopBar = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Sidebar color",
+            Color = theme.Sidebar,
+            Flag = "Vanta_Custom_Sidebar",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Sidebar = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Text color",
+            Color = theme.Text,
+            Flag = "Vanta_Custom_Text",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Text = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Subtext color",
+            Color = theme.SubText,
+            Flag = "Vanta_Custom_SubText",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.SubText = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        trackAppearanceRow(trackCustomThemeRow(Tab:CreateColorPicker({
+            Name = "Stroke color",
+            Color = theme.Stroke,
+            Flag = "Vanta_Custom_Stroke",
+            Callback = function(c)
+                if not customThemeEnabled then return end
+                customThemeColors.Stroke = c
+                applyCustomThemeNow(true)
+            end,
+        })))
+        setCustomThemeRowsEnabled(false)
 
-        Tab:CreateSlider({
+        trackAppearanceRow(Tab:CreateSlider({
             Name = "UI scale",
             Range = { 70, 130 },
             Increment = 5,
@@ -3932,9 +4132,9 @@ function Library:CreateWindow(cfg)
             CurrentValue = 100,
             Flag = "Vanta_UIScale",
             Callback = function(v) windowFrameScale.Scale = v / 100 end,
-        })
+        }))
 
-        Tab:CreateSlider({
+        trackAppearanceRow(Tab:CreateSlider({
             Name = "Window opacity",
             Range = { 60, 100 },
             Increment = 5,
@@ -3946,18 +4146,18 @@ function Library:CreateWindow(cfg)
                 tween(card,   0.18, { BackgroundTransparency = t })
                 tween(cardBg, 0.18, { BackgroundTransparency = t })
             end,
-        })
+        }))
 
-        Tab:CreateToggle({
+        trackAppearanceRow(Tab:CreateToggle({
             Name = "Background glow",
             CurrentValue = true,
             Flag = "Vanta_Glow",
             Callback = function(on)
                 tween(glow, 0.25, { ImageTransparency = on and 0 or 1 })
             end,
-        })
+        }))
 
-        Tab:CreateToggle({
+        trackAppearanceRow(Tab:CreateToggle({
             Name = "Background orbs",
             CurrentValue = true,
             Flag = "Vanta_Orbs",
@@ -3965,16 +4165,129 @@ function Library:CreateWindow(cfg)
                 contentOrb.Visible  = on
                 contentOrb2.Visible = on
             end,
-        })
+        }))
 
-        Tab:CreateToggle({
+        trackAppearanceRow(Tab:CreateToggle({
             Name = "Top-bar accent line",
             CurrentValue = true,
             Flag = "Vanta_Sheen",
             Callback = function(on)
                 sheen.Visible = on
             end,
-        })
+        }))
+
+        trackAppearanceRow(Tab:CreateSection("Notifications"))
+        trackAppearanceRow(Tab:CreateDropdown({
+            Name = "Notification style",
+            Options = { "Theme Glass", "Solid", "Minimal" },
+            CurrentOption = "Theme Glass",
+            Flag = "Vanta_NotificationStyle",
+            Callback = function(v)
+                local picked = type(v) == "table" and (v[1] or "Theme Glass") or (v or "Theme Glass")
+                if picked ~= "Theme Glass" and picked ~= "Solid" and picked ~= "Minimal" then
+                    picked = "Theme Glass"
+                end
+                notifStylePreset = picked
+                queueThemeAutoSave()
+            end,
+        }))
+        trackAppearanceRow(Tab:CreateDropdown({
+            Name = "Notification sound",
+            Options = NOTIF_SOUND_OPTIONS,
+            CurrentOption = "Notif. Sound 1",
+            Flag = "Vanta_NotificationSound",
+            Callback = function(v)
+                local picked = type(v) == "table" and (v[1] or "Notif. Sound 1") or (v or "Notif. Sound 1")
+                if not NOTIF_SOUND_MAP[picked] then
+                    picked = "Notif. Sound 1"
+                end
+                notifSoundChoice = picked
+                queueThemeAutoSave()
+            end,
+        }))
+        trackAppearanceRow(Tab:CreateButton({
+            Name = "Reset all theme customization",
+            Callback = function()
+                customThemeSyncing = true
+                pcall(function() themePresetRef:Set(sopts.DefaultTheme or "Light") end)
+                local f = Library.Flags
+                customThemeEnabled = false
+                pcall(function() applyFlagValue("Vanta_CustomTheme", false) end)
+                local defaultMain = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Accent) or THEME.Accent
+                local defaultBackground = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Background) or THEME.Background
+                local defaultCard = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Card) or THEME.Card
+                local defaultTopBar = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].TopBar) or THEME.TopBar
+                local defaultSidebar = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Sidebar) or THEME.Sidebar
+                local defaultText = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Text) or THEME.Text
+                local defaultSubText = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].SubText) or THEME.SubText
+                local defaultStroke = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Stroke) or THEME.Stroke
+                customThemeColors.Main = defaultMain
+                customThemeColors.Background = defaultBackground
+                customThemeColors.Card = defaultCard
+                customThemeColors.TopBar = defaultTopBar
+                customThemeColors.Sidebar = defaultSidebar
+                customThemeColors.Text = defaultText
+                customThemeColors.SubText = defaultSubText
+                customThemeColors.Stroke = defaultStroke
+                pcall(function() applyFlagValue("Vanta_Custom_Main", defaultMain) end)
+                pcall(function() applyFlagValue("Vanta_Custom_Background", defaultBackground) end)
+                pcall(function() applyFlagValue("Vanta_Custom_Card", defaultCard) end)
+                pcall(function() applyFlagValue("Vanta_Custom_TopBar", defaultTopBar) end)
+                pcall(function() applyFlagValue("Vanta_Custom_Sidebar", defaultSidebar) end)
+                pcall(function() applyFlagValue("Vanta_Custom_Text", defaultText) end)
+                pcall(function() applyFlagValue("Vanta_Custom_SubText", defaultSubText) end)
+                pcall(function() applyFlagValue("Vanta_Custom_Stroke", defaultStroke) end)
+                pcall(function() applyFlagValue("Vanta_NotificationStyle", "Theme Glass") end)
+                pcall(function() applyFlagValue("Vanta_NotificationSound", "Notif. Sound 1") end)
+                pcall(function() applyFlagValue("Vanta_UIScale", 100) end)
+                pcall(function() applyFlagValue("Vanta_Opacity", 100) end)
+                pcall(function() applyFlagValue("Vanta_Glow", true) end)
+                pcall(function() applyFlagValue("Vanta_Orbs", true) end)
+                pcall(function() applyFlagValue("Vanta_Sheen", true) end)
+                notifStylePreset = "Theme Glass"
+                notifSoundChoice = "Notif. Sound 1"
+                customThemeSyncing = false
+                setCustomThemeRowsEnabled(false)
+                applyThemeSelection(sopts.DefaultTheme or "Light", false)
+                queueThemeAutoSave()
+                Library:Notify({
+                    Title = "Vanta",
+                    Content = "Theme customization reset.",
+                    Duration = 3,
+                })
+            end,
+        }))
+
+        task.defer(function()
+            customThemeSyncing = true
+            local f = Library.Flags
+            customThemeEnabled = f["Vanta_CustomTheme"] == true
+            if typeof(f["Vanta_Custom_Main"]) == "Color3" then customThemeColors.Main = f["Vanta_Custom_Main"] end
+            if typeof(f["Vanta_Custom_Background"]) == "Color3" then customThemeColors.Background = f["Vanta_Custom_Background"] end
+            if typeof(f["Vanta_Custom_Card"]) == "Color3" then customThemeColors.Card = f["Vanta_Custom_Card"] end
+            if typeof(f["Vanta_Custom_TopBar"]) == "Color3" then customThemeColors.TopBar = f["Vanta_Custom_TopBar"] end
+            if typeof(f["Vanta_Custom_Sidebar"]) == "Color3" then customThemeColors.Sidebar = f["Vanta_Custom_Sidebar"] end
+            if typeof(f["Vanta_Custom_Text"]) == "Color3" then customThemeColors.Text = f["Vanta_Custom_Text"] end
+            if typeof(f["Vanta_Custom_SubText"]) == "Color3" then customThemeColors.SubText = f["Vanta_Custom_SubText"] end
+            if typeof(f["Vanta_Custom_Stroke"]) == "Color3" then customThemeColors.Stroke = f["Vanta_Custom_Stroke"] end
+            customThemeSyncing = false
+
+            setCustomThemeRowsEnabled(customThemeEnabled)
+            do
+                local ns = f["Vanta_NotificationStyle"]
+                if type(ns) == "table" then ns = ns[1] end
+                if ns == "Theme Glass" or ns == "Solid" or ns == "Minimal" then
+                    notifStylePreset = ns
+                end
+                applyNotificationSound()
+            end
+            if customThemeEnabled then
+                applyCustomThemeNow(false)
+            else
+                local selectedTheme = f["Vanta_Theme"] or (sopts.DefaultTheme or "Light")
+                applyThemeSelection(selectedTheme, false)
+            end
+        end)
 
         Tab:CreateSection("Behavior")
 
@@ -6106,9 +6419,15 @@ end
 local notifStack = {}
 function Library:Notify(opts)
     opts = opts or {}
+    if Library.Flags and Library.Flags["Vanta_Notifications"] == false then
+        return
+    end
     local notifTitle = tostring(opts.Title or "Notification")
     notifTitle = notifTitle:gsub("vanta%.dev", "Vanta")
     notifTitle = notifTitle:gsub("Vanta%.dev", "Vanta")
+    if type(playNotificationSound) == "function" then
+        pcall(playNotificationSound)
+    end
     local notifGui
     for _, host in ipairs(collectGuiHosts()) do
         local existing = host:FindFirstChild("VantaNotifs")
@@ -6128,6 +6447,7 @@ function Library:Notify(opts)
     end
 
     local theme = THEME
+    local style = notifStylePreset or "Theme Glass"
     local holder = new("Frame", {
         AnchorPoint = Vector2.new(0, 1),
         Position = UDim2.new(0, 20, 1, -20 - (#notifStack * 88)),
@@ -6239,14 +6559,38 @@ function Library:Notify(opts)
 
     table.insert(notifStack, holder)
 
-    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.12, 0, 0.82)
+    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.06, 0, 0.72)
+    local frostTarget = 0.04
+    local strokeTarget = 0.5
+    local shadowTarget = 0.62
+    local glowTarget = 0.86
+    local titleTarget = 0
+    local bodyTarget = 0
+    if style == "Solid" then
+        targetCardTransparency = 0.16
+        frostTarget = 0.22
+        strokeTarget = 0.42
+        shadowTarget = 0.56
+        glowTarget = 0.8
+    elseif style == "Minimal" then
+        targetCardTransparency = 0.28
+        frostTarget = 0.14
+        strokeTarget = 0.68
+        shadowTarget = 0.75
+        glowTarget = 0.94
+        titleTarget = 0.04
+        bodyTarget = 0.08
+    end
     tween(card, 0.25, {BackgroundTransparency = targetCardTransparency})
-    tween(frost, 0.25, {BackgroundTransparency = 0.08})
-    tween(cs,   0.25, {Transparency = 0.58})
-    tween(notifShadow, 0.3, {ImageTransparency = 0.72})
-    tween(notifGlow,   0.3, {ImageTransparency = 0.9})
+    tween(frost, 0.25, {BackgroundTransparency = frostTarget})
+    tween(cs,   0.25, {Transparency = strokeTarget})
+    tween(notifShadow, 0.3, {ImageTransparency = shadowTarget})
+    tween(notifGlow,   0.3, {ImageTransparency = glowTarget})
     tween(ttl,  0.25, {TextTransparency = 0})
-    tween(body, 0.3,  {TextTransparency = 0})
+    tween(body, 0.3,  {TextTransparency = bodyTarget})
+    if titleTarget > 0 then
+        tween(ttl, 0.25, {TextTransparency = titleTarget})
+    end
 
     task.delay(opts.Duration or 4, function()
         tween(card, 0.25, {BackgroundTransparency = 1})
