@@ -2856,7 +2856,7 @@ function Library:CreateWindow(cfg)
         TextSize       = 14,
         TextColor3     = theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Text           = "Themes",
+        Text           = "Settings",
         ZIndex         = 33,
         Parent         = themesBtn,
     })
@@ -2869,7 +2869,7 @@ function Library:CreateWindow(cfg)
         TextColor3     = theme.Muted,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate   = Enum.TextTruncate.AtEnd,
-        Text           = "Pick a look for the menu",
+        Text           = "Customize UI and behavior",
         ZIndex         = 33,
         Parent         = themesBtn,
     })
@@ -3222,7 +3222,18 @@ function Library:CreateWindow(cfg)
     end
 
     themesBtn.MouseButton1Down:Connect(function(x, y) ripple(themesBtn, x, y, theme.AccentHi) end)
-    themesBtn.MouseButton1Click:Connect(openThemesView)
+    themesBtn.MouseButton1Click:Connect(function()
+        if not Window._settingsTab then
+            Window._settingsTabCreated = true
+            pcall(function()
+                Window:CreateSettingsTab(cfg.SettingsTabOptions)
+            end)
+        end
+        if Window._settingsTab then
+            Window:SelectTab(Window._settingsTab)
+            dismissDashboard(nil)
+        end
+    end)
     themesBtn.MouseEnter:Connect(function()
         tween(themesBtn,       0.12, { BackgroundColor3 = theme.RowHover })
         tween(themesBtnStroke, 0.12, { Color = theme.Accent, Transparency = 0.15 })
@@ -4003,47 +4014,6 @@ function Library:CreateWindow(cfg)
             Name = "Sound effects",
             CurrentValue = true,
             Flag = "Vanta_Sounds",
-        })
-
-        Tab:CreateSection("Configuration")
-        local activeConfigName = Window.ConfigFile
-
-        Tab:CreateInput({
-            Name = "Config name",
-            PlaceholderText = "default",
-            CurrentValue = activeConfigName,
-            Flag = "Vanta_ConfigName",
-            Callback = function(v)
-                local cleaned = sanitizeConfigName(v)
-                if cleaned ~= "" then
-                    activeConfigName = cleaned
-                    Window:SetConfigFile(cleaned)
-                end
-            end,
-        })
-
-        Tab:CreateButton({
-            Name = "Save config",
-            Callback = function()
-                local ok, msg = Window:SaveConfig(activeConfigName)
-                Library:Notify({
-                    Title = "Configuration",
-                    Content = ok and ("Saved to " .. tostring(msg)) or ("Save failed: " .. tostring(msg)),
-                    Duration = 3,
-                })
-            end,
-        })
-
-        Tab:CreateButton({
-            Name = "Load config",
-            Callback = function()
-                local ok, msg = Window:LoadConfig(activeConfigName)
-                Library:Notify({
-                    Title = "Configuration",
-                    Content = ok and ("Loaded " .. tostring(msg)) or ("Load failed: " .. tostring(msg)),
-                    Duration = 3,
-                })
-            end,
         })
 
         Tab:CreateSection("What's new")
@@ -6091,6 +6061,43 @@ function Library:CreateWindow(cfg)
             end)
         end)
     end
+
+    task.defer(function()
+        local guideFolder = "vantadev"
+        local guideFile = guideFolder .. "/ui-guide-seen.txt"
+        local seen = false
+        pcall(function()
+            if isfile and isfile(guideFile) then
+                seen = true
+            end
+        end)
+        if seen then return end
+        pcall(function()
+            if makefolder and isfolder and not isfolder(guideFolder) then
+                makefolder(guideFolder)
+            end
+            if writefile then
+                writefile(guideFile, "1")
+            end
+        end)
+        Library:Notify({
+            Title = "Vanta",
+            Content = "Welcome. Use the left sidebar to switch feature tabs.",
+            Duration = 3.5,
+        })
+        task.wait(3.1)
+        Library:Notify({
+            Title = "Vanta",
+            Content = "Use the Settings card for appearance and UI behavior options.",
+            Duration = 3.5,
+        })
+        task.wait(3.1)
+        Library:Notify({
+            Title = "Vanta",
+            Content = "Press ; to open quick search and jump to any setting.",
+            Duration = 3.5,
+        })
+    end)
 
     Library.Windows[name] = Window
     return Window
