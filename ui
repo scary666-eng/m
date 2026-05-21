@@ -6500,11 +6500,11 @@ function Library:Notify(opts)
 
     table.insert(notifStack, holder)
 
-    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.06, 0, 0.72)
-    local frostTarget = 0.04
-    local strokeTarget = 0.5
-    local shadowTarget = 0.62
-    local glowTarget = 0.86
+    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.03, 0, 0.68)
+    local frostTarget = 0.02
+    local strokeTarget = 0.42
+    local shadowTarget = 0.54
+    local glowTarget = 0.8
     local bodyTarget = 0
     tween(card, 0.25, {BackgroundTransparency = targetCardTransparency})
     tween(frost, 0.25, {BackgroundTransparency = frostTarget})
