@@ -835,21 +835,6 @@ local function iconFromAssetId(id)
     }
 end
 
-local NOTIF_SOUND_MAP = {
-    ["None"] = false,
-    ["Notif. Sound 1"] = "rbxassetid://120992224916853",
-    ["Notif. Sound 2"] = "rbxassetid://106553517979212",
-    ["Notif. Sound 3"] = "rbxassetid://96973825311570",
-    ["Notif. Sound 4"] = "rbxassetid://71316035923166",
-}
-local NOTIF_SOUND_OPTIONS = {
-    "None",
-    "Notif. Sound 1",
-    "Notif. Sound 2",
-    "Notif. Sound 3",
-    "Notif. Sound 4",
-}
-
 local function resolveIcon(name)
     if not name then return nil end
     if type(name) ~= "string" then name = tostring(name) end
@@ -2191,33 +2176,6 @@ function Library:CreateWindow(cfg)
         SubText    = theme.SubText,
         Stroke     = theme.Stroke,
     }
-    local notifStylePreset = "Theme Glass"
-    local notifSoundChoice = "Notif. Sound 1"
-    local function applyNotificationSound()
-        local selected = Library.Flags["Vanta_NotificationSound"]
-        if type(selected) == "table" then selected = selected[1] end
-        if type(selected) == "string" and NOTIF_SOUND_MAP[selected] ~= nil then
-            notifSoundChoice = selected
-        end
-    end
-    local function playNotificationSound()
-        if Library.Flags["Vanta_Sounds"] == false then return end
-        if notifSoundChoice == "None" then return end
-        local sid = NOTIF_SOUND_MAP[notifSoundChoice] or NOTIF_SOUND_MAP["Notif. Sound 1"]
-        if not sid then return end
-        local ok, snd = pcall(function()
-            local s = Instance.new("Sound")
-            s.Name = "VantaNotifSound"
-            s.SoundId = sid
-            s.Volume = 0.85
-            s.PlayOnRemove = true
-            s.Parent = hostGui()
-            return s
-        end)
-        if ok and snd then
-            pcall(function() snd:Destroy() end)
-        end
-    end
     local function buildCustomThemeOverrides()
         if not customThemeEnabled then return nil end
         local overrides = {
@@ -3970,14 +3928,6 @@ function Library:CreateWindow(cfg)
         if type(loadedTheme) == "string" and loadedTheme ~= "" then
             applyTheme(loadedTheme, nil)
         end
-        do
-            local ns = sourceFlags["Vanta_NotificationStyle"]
-            if type(ns) == "table" then ns = ns[1] end
-            if ns == "Theme Glass" or ns == "Solid" or ns == "Minimal" then
-                notifStylePreset = ns
-            end
-            applyNotificationSound()
-        end
         return true, path
     end
 
@@ -4211,35 +4161,6 @@ function Library:CreateWindow(cfg)
             end,
         })
 
-        Tab:CreateSection("Notifications")
-        local notifStyleRef = Tab:CreateDropdown({
-            Name = "Notification style",
-            Options = { "Theme Glass", "Solid", "Minimal" },
-            CurrentOption = "Theme Glass",
-            Flag = "Vanta_NotificationStyle",
-            Callback = function(v)
-                local picked = type(v) == "table" and (v[1] or "Theme Glass") or (v or "Theme Glass")
-                if picked ~= "Theme Glass" and picked ~= "Solid" and picked ~= "Minimal" then
-                    picked = "Theme Glass"
-                end
-                notifStylePreset = picked
-                queueThemeAutoSave()
-            end,
-        })
-        local notifSoundRef = Tab:CreateDropdown({
-            Name = "Notification sound",
-            Options = NOTIF_SOUND_OPTIONS,
-            CurrentOption = "Notif. Sound 1",
-            Flag = "Vanta_NotificationSound",
-            Callback = function(v)
-                local picked = type(v) == "table" and (v[1] or "Notif. Sound 1") or (v or "Notif. Sound 1")
-                if NOTIF_SOUND_MAP[picked] == nil then
-                    picked = "Notif. Sound 1"
-                end
-                notifSoundChoice = picked
-                queueThemeAutoSave()
-            end,
-        })
         Tab:CreateButton({
             Name = "Reset all theme customization",
             Callback = function()
@@ -4272,21 +4193,15 @@ function Library:CreateWindow(cfg)
                 pcall(function() applyFlagValue("Vanta_Custom_Text", defaultText) end)
                 pcall(function() applyFlagValue("Vanta_Custom_SubText", defaultSubText) end)
                 pcall(function() applyFlagValue("Vanta_Custom_Stroke", defaultStroke) end)
-                pcall(function() applyFlagValue("Vanta_NotificationStyle", "Theme Glass") end)
-                pcall(function() applyFlagValue("Vanta_NotificationSound", "Notif. Sound 1") end)
                 pcall(function() applyFlagValue("Vanta_UIScale", 90) end)
                 pcall(function() applyFlagValue("Vanta_Opacity", 100) end)
                 pcall(function() applyFlagValue("Vanta_Glow", true) end)
                 pcall(function() applyFlagValue("Vanta_Orbs", true) end)
                 pcall(function() applyFlagValue("Vanta_Sheen", true) end)
-                notifStylePreset = "Theme Glass"
-                notifSoundChoice = "Notif. Sound 1"
                 customThemeSyncing = false
                 setCustomThemeRowsEnabled(false)
                 syncCustomThemePickerViews()
                 applyThemeSelection(sopts.DefaultTheme or "Light", false)
-                pcall(function() if notifStyleRef then notifStyleRef:Set("Theme Glass") end end)
-                pcall(function() if notifSoundRef then notifSoundRef:Set("Notif. Sound 1") end end)
                 queueThemeAutoSave()
                 Library:Notify({
                     Title = "Vanta",
@@ -4311,14 +4226,6 @@ function Library:CreateWindow(cfg)
             customThemeSyncing = false
 
             setCustomThemeRowsEnabled(customThemeEnabled)
-            do
-                local ns = f["Vanta_NotificationStyle"]
-                if type(ns) == "table" then ns = ns[1] end
-                if ns == "Theme Glass" or ns == "Solid" or ns == "Minimal" then
-                    notifStylePreset = ns
-                end
-                applyNotificationSound()
-            end
             if customThemeEnabled then
                 applyCustomThemeNow(false)
             else
@@ -6463,9 +6370,6 @@ function Library:Notify(opts)
     local notifTitle = tostring(opts.Title or "Notification")
     notifTitle = notifTitle:gsub("vanta%.dev", "Vanta")
     notifTitle = notifTitle:gsub("Vanta%.dev", "Vanta")
-    if type(playNotificationSound) == "function" then
-        pcall(playNotificationSound)
-    end
     local notifGui
     for _, host in ipairs(collectGuiHosts()) do
         local existing = host:FindFirstChild("VantaNotifs")
@@ -6485,7 +6389,6 @@ function Library:Notify(opts)
     end
 
     local theme = THEME
-    local style = notifStylePreset or "Theme Glass"
     local holder = new("Frame", {
         AnchorPoint = Vector2.new(0, 1),
         Position = UDim2.new(0, 20, 1, -20 - (#notifStack * 88)),
@@ -6602,23 +6505,7 @@ function Library:Notify(opts)
     local strokeTarget = 0.5
     local shadowTarget = 0.62
     local glowTarget = 0.86
-    local titleTarget = 0
     local bodyTarget = 0
-    if style == "Solid" then
-        targetCardTransparency = 0.16
-        frostTarget = 0.22
-        strokeTarget = 0.42
-        shadowTarget = 0.56
-        glowTarget = 0.8
-    elseif style == "Minimal" then
-        targetCardTransparency = 0.28
-        frostTarget = 0.14
-        strokeTarget = 0.68
-        shadowTarget = 0.75
-        glowTarget = 0.94
-        titleTarget = 0.04
-        bodyTarget = 0.08
-    end
     tween(card, 0.25, {BackgroundTransparency = targetCardTransparency})
     tween(frost, 0.25, {BackgroundTransparency = frostTarget})
     tween(cs,   0.25, {Transparency = strokeTarget})
@@ -6626,9 +6513,6 @@ function Library:Notify(opts)
     tween(notifGlow,   0.3, {ImageTransparency = glowTarget})
     tween(ttl,  0.25, {TextTransparency = 0})
     tween(body, 0.3,  {TextTransparency = bodyTarget})
-    if titleTarget > 0 then
-        tween(ttl, 0.25, {TextTransparency = titleTarget})
-    end
 
     task.delay(opts.Duration or 4, function()
         tween(card, 0.25, {BackgroundTransparency = 1})
