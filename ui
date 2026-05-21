@@ -4010,8 +4010,10 @@ function Library:CreateWindow(cfg)
         })
 
         local customThemeSyncing = false
+        local customThemePickerSyncing = false
         local customMainRef, customBackgroundRef, customCardRef, customTopbarRef, customSidebarRef, customTextRef, customSubtextRef, customStrokeRef
         local function syncCustomThemePickerViews()
+            customThemePickerSyncing = true
             pcall(function() if customMainRef then customMainRef:Set(customThemeColors.Main) end end)
             pcall(function() if customBackgroundRef then customBackgroundRef:Set(customThemeColors.Background) end end)
             pcall(function() if customCardRef then customCardRef:Set(customThemeColors.Card) end end)
@@ -4020,6 +4022,7 @@ function Library:CreateWindow(cfg)
             pcall(function() if customTextRef then customTextRef:Set(customThemeColors.Text) end end)
             pcall(function() if customSubtextRef then customSubtextRef:Set(customThemeColors.SubText) end end)
             pcall(function() if customStrokeRef then customStrokeRef:Set(customThemeColors.Stroke) end end)
+            customThemePickerSyncing = false
         end
         local function setCustomThemeRowsEnabled(_on)
         end
@@ -4046,6 +4049,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Accent,
             Flag = "Vanta_Custom_Main",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4059,6 +4063,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Background,
             Flag = "Vanta_Custom_Background",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4072,6 +4077,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Card,
             Flag = "Vanta_Custom_Card",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4085,6 +4091,7 @@ function Library:CreateWindow(cfg)
             Color = theme.TopBar,
             Flag = "Vanta_Custom_TopBar",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4098,6 +4105,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Sidebar,
             Flag = "Vanta_Custom_Sidebar",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4111,6 +4119,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Text,
             Flag = "Vanta_Custom_Text",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4124,6 +4133,7 @@ function Library:CreateWindow(cfg)
             Color = theme.SubText,
             Flag = "Vanta_Custom_SubText",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
@@ -4137,6 +4147,7 @@ function Library:CreateWindow(cfg)
             Color = theme.Stroke,
             Flag = "Vanta_Custom_Stroke",
             Callback = function(c)
+                if customThemePickerSyncing then return end
                 if not customThemeEnabled then
                     syncCustomThemePickerViews()
                     return
