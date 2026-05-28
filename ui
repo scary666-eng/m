@@ -574,6 +574,7 @@ local function stroke(inst, col, thick, trans)
         Color = col or THEME.Stroke,
         Thickness = thick or 1,
         Transparency = trans or 0,
+        Enabled = false,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Parent = inst,
     })
@@ -1211,6 +1212,7 @@ function Library:CreateWindow(cfg)
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = SHADOW_SLICE,
         ZIndex = 1,
+        Visible = false,
         Parent = windowFrame,
     })
 
@@ -1658,6 +1660,7 @@ function Library:CreateWindow(cfg)
         BackgroundTransparency = 0.94,
         BorderSizePixel = 0,
         ZIndex = 11,
+        Visible = false,
         Parent = contentHolder,
     })
     corner(contentOrb, 999)
@@ -1670,6 +1673,7 @@ function Library:CreateWindow(cfg)
         BackgroundTransparency = 0.96,
         BorderSizePixel = 0,
         ZIndex = 11,
+        Visible = false,
         Parent = contentHolder,
     })
     corner(contentOrb2, 999)
@@ -2458,6 +2462,16 @@ function Library:CreateWindow(cfg)
         Parent           = card,
     })
     corner(dashboardOverlay, 18)
+    
+    new("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.00, theme.CardTop),
+            ColorSequenceKeypoint.new(0.50, theme.Card),
+            ColorSequenceKeypoint.new(1.00, theme.AccentDeep),
+        }),
+        Rotation = 135,
+        Parent = dashboardOverlay,
+    })
 
     local PAD     = 14
     local BOT_PAD = 24
@@ -2498,6 +2512,7 @@ function Library:CreateWindow(cfg)
             Position         = UDim2.fromOffset(x, y),
             Size             = UDim2.fromOffset(w, h),
             BackgroundColor3 = theme.CardTop,
+            BackgroundTransparency = 0.75,
             BorderSizePixel  = 0,
             ClipsDescendants = true,
             ZIndex           = 32,
@@ -2548,6 +2563,7 @@ function Library:CreateWindow(cfg)
     local function makeSubCard(parent, layoutOrder, titleText, descText)
         local cell = new("Frame", {
             BackgroundColor3 = theme.Row,
+            BackgroundTransparency = 0.75,
             BorderSizePixel  = 0,
             LayoutOrder      = layoutOrder,
             ClipsDescendants = true,
@@ -2590,6 +2606,7 @@ function Library:CreateWindow(cfg)
         Position         = UDim2.fromOffset(PAD, yHero),
         Size             = UDim2.fromOffset(innerW, HERO_H),
         BackgroundColor3 = theme.CardTop,
+        BackgroundTransparency = 0.75,
         BorderSizePixel  = 0,
         ClipsDescendants = true,
         ZIndex           = 32,
@@ -2820,6 +2837,7 @@ function Library:CreateWindow(cfg)
         Position         = UDim2.fromOffset(PAD, yBot),
         Size             = UDim2.fromOffset(leftW, BOT_H),
         BackgroundColor3 = theme.Accent,
+        BackgroundTransparency = 0.4,
         BorderSizePixel  = 0,
         Text             = "",
         AutoButtonColor  = false,
@@ -2880,6 +2898,7 @@ function Library:CreateWindow(cfg)
         Position         = UDim2.fromOffset(rightX, yBot),
         Size             = UDim2.fromOffset(botRightBtnW, BOT_H),
         BackgroundColor3 = theme.CardTop,
+        BackgroundTransparency = 0.75,
         BorderSizePixel  = 0,
         Text             = "",
         AutoButtonColor  = false,
@@ -2933,25 +2952,6 @@ function Library:CreateWindow(cfg)
     })
     local _previewSeq = 0
     local function buildThemePreviewDots()
-        for _, c in ipairs(themePreviewRow:GetChildren()) do
-            if c:IsA("Frame") then c:Destroy() end
-        end
-        _previewSeq = _previewSeq + 1
-        local previewNames = { "Light", "Dark", "Sunset", "NeonSlate", "Ocean" }
-        for i, n in ipairs(previewNames) do
-            local pp = THEME_PRESETS[n]
-            if pp then
-                local d = new("Frame", {
-                    Size             = UDim2.fromOffset(10, 10),
-                    BackgroundColor3 = pp.Accent,
-                    BorderSizePixel  = 0,
-                    LayoutOrder      = i,
-                    ZIndex           = 34,
-                    Parent           = themePreviewRow,
-                })
-                corner(d, 999)
-            end
-        end
     end
     buildThemePreviewDots()
 
@@ -2959,6 +2959,7 @@ function Library:CreateWindow(cfg)
         Position         = UDim2.fromOffset(rightX + botRightBtnW + GAP, yBot),
         Size             = UDim2.fromOffset(botRightBtnW, BOT_H),
         BackgroundColor3 = theme.CardTop,
+        BackgroundTransparency = 0.75,
         BorderSizePixel  = 0,
         Text             = "",
         AutoButtonColor  = false,
@@ -3106,7 +3107,7 @@ function Library:CreateWindow(cfg)
     for k in pairs(THEME_PRESETS) do sortedDashThemes[#sortedDashThemes + 1] = k end
     table.sort(sortedDashThemes)
 
-    local activeDashThemeName = (cfg.SettingsTabOptions and cfg.SettingsTabOptions.DefaultTheme) or "Light"
+    local activeDashThemeName = (cfg.SettingsTabOptions and cfg.SettingsTabOptions.DefaultTheme) or "Midnight"
     local themeCardMap = {}
 
     local function buildThemeCard(tname)
@@ -3390,14 +3391,14 @@ function Library:CreateWindow(cfg)
             tween(settingsBtn,    0.12, { BackgroundTransparency = theme.GlassHoverTransparency })
             tween(settingsStroke, 0.12, { Transparency = 0.15, Color = theme.GlassRimHi })
             if settingsGearImg then
-                tween(settingsGearImg, 0.18, { Rotation = 60, ImageColor3 = theme.AccentDeep })
+                tween(settingsGearImg, 0.18, { ImageColor3 = theme.AccentDeep })
             end
         end)
         settingsBtn.MouseLeave:Connect(function()
             tween(settingsBtn,    0.12, { BackgroundTransparency = theme.GlassBaseTransparency })
             tween(settingsStroke, 0.12, { Transparency = 0.42, Color = theme.GlassRim })
             if settingsGearImg then
-                tween(settingsGearImg, 0.25, { Rotation = 0, ImageColor3 = theme.Text })
+                tween(settingsGearImg, 0.25, { ImageColor3 = theme.Text })
             end
         end)
         settingsBtn.MouseButton1Down:Connect(function(x, y)
@@ -3638,7 +3639,7 @@ function Library:CreateWindow(cfg)
                     tween(t.TabStroke, 0.22, { Transparency = 0.42, Color = theme.GlassRim })
                 end
             end
-            tween(t.Label, 0.22, { TextColor3 = active and theme.AccentDeep or theme.SubText })
+            tween(t.Label, 0.22, { TextColor3 = active and theme.Text or theme.SubText })
             if active then
                 if t.Dot then
                     tween(t.Dot, 0.22, { BackgroundColor3 = theme.AccentHi })
@@ -3647,7 +3648,7 @@ function Library:CreateWindow(cfg)
 
                     t.Icon.Rotation = -10
                     tween(t.Icon, 0.36, { Rotation = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-                    tween(t.Icon, 0.22, { ImageColor3 = theme.AccentDeep })
+                    tween(t.Icon, 0.22, { ImageColor3 = theme.Text })
                 end
                 task.spawn(function()
                     local mySeq = pulseSeq
@@ -3954,7 +3955,7 @@ function Library:CreateWindow(cfg)
         local themePresetRef = Tab:CreateDropdown({
             Name = "Theme preset",
             Options = presetNames,
-            CurrentOption = sopts.DefaultTheme or "Light",
+            CurrentOption = sopts.DefaultTheme or "Midnight",
             Flag = "Vanta_Theme",
             Callback = function(v) applyThemeSelection(v, true) end,
         })
@@ -3978,7 +3979,7 @@ function Library:CreateWindow(cfg)
         end
         local function applyCustomThemeNow(shouldSave)
             if customThemeSyncing then return end
-            local selectedTheme = Library.Flags["Vanta_Theme"] or (sopts.DefaultTheme or "Light")
+            local selectedTheme = Library.Flags["Vanta_Theme"] or (sopts.DefaultTheme or "Midnight")
             applyThemeSelection(selectedTheme, shouldSave ~= false)
         end
 
@@ -4135,16 +4136,17 @@ function Library:CreateWindow(cfg)
 
         Tab:CreateToggle({
             Name = "Background glow",
-            CurrentValue = true,
+            CurrentValue = false,
             Flag = "Vanta_Glow",
             Callback = function(on)
                 tween(glow, 0.25, { ImageTransparency = on and 0 or 1 })
+                if not on then glow.Visible = false else glow.Visible = true end
             end,
         })
 
         Tab:CreateToggle({
             Name = "Background orbs",
-            CurrentValue = true,
+            CurrentValue = false,
             Flag = "Vanta_Orbs",
             Callback = function(on)
                 contentOrb.Visible  = on
@@ -4165,18 +4167,18 @@ function Library:CreateWindow(cfg)
             Name = "Reset all theme customization",
             Callback = function()
                 customThemeSyncing = true
-                pcall(function() themePresetRef:Set(sopts.DefaultTheme or "Light") end)
+                pcall(function() themePresetRef:Set(sopts.DefaultTheme or "Midnight") end)
                 local f = Library.Flags
                 customThemeEnabled = false
                 pcall(function() applyFlagValue("Vanta_CustomTheme", false) end)
-                local defaultMain = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Accent) or THEME.Accent
-                local defaultBackground = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Background) or THEME.Background
-                local defaultCard = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Card) or THEME.Card
-                local defaultTopBar = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].TopBar) or THEME.TopBar
-                local defaultSidebar = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Sidebar) or THEME.Sidebar
-                local defaultText = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Text) or THEME.Text
-                local defaultSubText = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].SubText) or THEME.SubText
-                local defaultStroke = (THEME_PRESETS[sopts.DefaultTheme or "Light"] and THEME_PRESETS[sopts.DefaultTheme or "Light"].Stroke) or THEME.Stroke
+                local defaultMain = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Accent) or THEME.Accent
+                local defaultBackground = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Background) or THEME.Background
+                local defaultCard = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Card) or THEME.Card
+                local defaultTopBar = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].TopBar) or THEME.TopBar
+                local defaultSidebar = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Sidebar) or THEME.Sidebar
+                local defaultText = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Text) or THEME.Text
+                local defaultSubText = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].SubText) or THEME.SubText
+                local defaultStroke = (THEME_PRESETS[sopts.DefaultTheme or "Midnight"] and THEME_PRESETS[sopts.DefaultTheme or "Midnight"].Stroke) or THEME.Stroke
                 customThemeColors.Main = defaultMain
                 customThemeColors.Background = defaultBackground
                 customThemeColors.Card = defaultCard
@@ -4201,7 +4203,7 @@ function Library:CreateWindow(cfg)
                 customThemeSyncing = false
                 setCustomThemeRowsEnabled(false)
                 syncCustomThemePickerViews()
-                applyThemeSelection(sopts.DefaultTheme or "Light", false)
+                applyThemeSelection(sopts.DefaultTheme or "Midnight", false)
                 queueThemeAutoSave()
                 Library:Notify({
                     Title = "Vanta",
@@ -4229,7 +4231,7 @@ function Library:CreateWindow(cfg)
             if customThemeEnabled then
                 applyCustomThemeNow(false)
             else
-                local selectedTheme = f["Vanta_Theme"] or (sopts.DefaultTheme or "Light")
+                local selectedTheme = f["Vanta_Theme"] or (sopts.DefaultTheme or "Midnight")
                 applyThemeSelection(selectedTheme, false)
             end
         end)
@@ -4329,7 +4331,7 @@ function Library:CreateWindow(cfg)
         Tab:CreateButton({
             Name = "Reset settings",
             Callback = function()
-                applyTheme("Light", nil)
+                applyTheme("Midnight", nil)
                 windowFrameScale.Scale = 1
                 dragLocked = false
                 tween(card,   0.18, { BackgroundTransparency = 0 })
@@ -6414,6 +6416,7 @@ function Library:Notify(opts)
         ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = SHADOW_SLICE,
+        Visible = false,
         Parent = shadowMask,
     })
 
@@ -6434,6 +6437,7 @@ function Library:Notify(opts)
         ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = SHADOW_SLICE,
+        Visible = false,
         Parent = glowMask,
     })
 
