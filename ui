@@ -6465,12 +6465,12 @@ function Library:Notify(opts)
         Rotation = -28,
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(232, 238, 248)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(240, 245, 255)),
         }),
         Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.74),
-            NumberSequenceKeypoint.new(0.45, 0.82),
-            NumberSequenceKeypoint.new(1, 0.9),
+            NumberSequenceKeypoint.new(0, 0.45),
+            NumberSequenceKeypoint.new(0.45, 0.55),
+            NumberSequenceKeypoint.new(1, 0.75),
         }),
         Parent = frost,
     })
@@ -6504,11 +6504,11 @@ function Library:Notify(opts)
 
     table.insert(notifStack, holder)
 
-    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) + 0.03, 0, 0.68)
-    local frostTarget = 0.02
-    local strokeTarget = 0.42
-    local shadowTarget = 0.54
-    local glowTarget = 0.8
+    local targetCardTransparency = math.clamp((theme.GlassBaseTransparency or 0.38) - 0.05, 0, 0.68)
+    local frostTarget = 0
+    local strokeTarget = 0.25
+    local shadowTarget = 0.4
+    local glowTarget = 0.6
     local bodyTarget = 0
     tween(card, 0.25, {BackgroundTransparency = targetCardTransparency})
     tween(frost, 0.25, {BackgroundTransparency = frostTarget})
