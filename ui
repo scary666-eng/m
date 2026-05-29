@@ -1201,6 +1201,34 @@ function Library:CreateWindow(cfg)
     windowFrameScale.Scale = 0.90
     windowFrameScale.Parent = windowFrame
 
+    local fitScale = Instance.new("UIScale")
+    fitScale.Name = "VantaFitScale"
+    fitScale.Scale = 1
+    fitScale.Parent = fadeRoot
+
+    do
+        local FIT_MARGIN = MOBILE and 0.98 or 0.92
+        local function applyFitScale()
+            local cam = workspace.CurrentCamera
+            local vp = cam and cam.ViewportSize
+            if not vp or vp.X <= 0 or vp.Y <= 0 then return end
+            local s = math.min(1, (vp.X * FIT_MARGIN) / WIN_W, (vp.Y * FIT_MARGIN) / WIN_H)
+            if s ~= s then return end
+            fitScale.Scale = math.clamp(s, 0.4, 1)
+        end
+        local camConn
+        local function hookCamera()
+            if camConn then camConn:Disconnect() end
+            local cam = workspace.CurrentCamera
+            if cam then
+                camConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyFitScale)
+            end
+            applyFitScale()
+        end
+        hookCamera()
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(hookCamera)
+    end
+
     local glow = new("ImageLabel", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
@@ -1831,20 +1859,52 @@ function Library:CreateWindow(cfg)
     local dragLocked = false
     local dragStart, startPos
     local miniDragStart, miniStartPos
-    topbar.InputBegan:Connect(function(input)
-        if dragLocked then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-           or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = windowFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+    local function beginWindowDrag(input)
+        dragging = true
+        dragStart = input.Position
+        startPos = windowFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+
+    local function attachWindowDragHandle(handle)
+        handle.InputBegan:Connect(function(input)
+            if dragLocked then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+               or input.UserInputType == Enum.UserInputType.Touch then
+                beginWindowDrag(input)
+            end
+        end)
+    end
+
+    attachWindowDragHandle(topbar)
+
+    local dragCornerSize = MOBILE and 26 or 32
+    local dragCornerBL = new("Frame", {
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.fromScale(0, 1),
+        Size = UDim2.fromOffset(dragCornerSize, dragCornerSize),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 35,
+        Parent = card,
+    })
+    local dragCornerBR = new("Frame", {
+        AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.fromScale(1, 1),
+        Size = UDim2.fromOffset(dragCornerSize, dragCornerSize),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 35,
+        Parent = card,
+    })
+    attachWindowDragHandle(dragCornerBL)
+    attachWindowDragHandle(dragCornerBR)
     miniBar.InputBegan:Connect(function(input)
         if dragLocked then return end
         if not miniBar.Visible then return end
@@ -3332,6 +3392,8 @@ function Library:CreateWindow(cfg)
         topbar.Visible = true
         sidebar.Visible = true
         contentHolder.Visible = true
+        dragCornerBL.Visible = true
+        dragCornerBR.Visible = true
         tween(windowFrame, 0.24, { Size = UDim2.fromOffset(WIN_W, WIN_H) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
         windowFrameScale.Scale = 0.985
         tween(windowFrameScale, 0.20, { Scale = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -3347,6 +3409,8 @@ function Library:CreateWindow(cfg)
         topbar.Visible = false
         sidebar.Visible = false
         contentHolder.Visible = false
+        dragCornerBL.Visible = false
+        dragCornerBR.Visible = false
         miniBar.Visible = true
         miniBarScale.Scale = 0.98
         tween(miniBarScale, 0.18, { Scale = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
