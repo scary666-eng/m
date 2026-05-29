@@ -6392,8 +6392,8 @@ function Library:Notify(opts)
 
     local theme = THEME
     local holder = new("Frame", {
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 20, 1, -20 - (#notifStack * 88)),
+        AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -20, 1, -20 - (#notifStack * 88)),
         Size = UDim2.fromOffset(312, 78),
         BackgroundTransparency = 1,
         Parent = notifGui,
@@ -6475,13 +6475,67 @@ function Library:Notify(opts)
         Parent = frost,
     })
 
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://16888522973"
+        sound.Volume = 0.6
+        sound.Parent = game:GetService("SoundService")
+        sound:Play()
+        game:GetService("Debris"):AddItem(sound, 3)
+    end)
+
+    local tabIconName = opts.TabIcon
+    local hasTabIcon = tabIconName ~= nil
+    local iconData
+    if hasTabIcon then
+        iconData = resolveIcon(tabIconName)
+        if not iconData or not iconData.Image then
+            hasTabIcon = false
+        end
+    end
+
+    local textOffsetX = hasTabIcon and 54 or 16
+
+    local iconBg, iconImg
+    if hasTabIcon then
+        iconBg = new("Frame", {
+            Position = UDim2.fromOffset(12, 12),
+            Size = UDim2.fromOffset(32, 32),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 1,
+            Parent = card,
+        })
+        corner(iconBg, 99)
+        local istroke = new("UIStroke", {
+            Color = theme.GlassRimHi or theme.GlassRim,
+            Transparency = 1,
+            Thickness = 1,
+            Parent = iconBg,
+        })
+        iconImg = new("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(16, 16),
+            BackgroundTransparency = 1,
+            ImageColor3 = Color3.fromRGB(40, 40, 40),
+            ImageTransparency = 1,
+            Image = iconData.Image,
+            ImageRectOffset = iconData.ImageRectOffset or Vector2.zero,
+            ImageRectSize = iconData.ImageRectSize or Vector2.zero,
+            Parent = iconBg,
+        })
+        tween(iconBg, 0.25, {BackgroundTransparency = 0.4})
+        tween(istroke, 0.25, {Transparency = 0.2})
+        tween(iconImg, 0.25, {ImageTransparency = 0})
+    end
+
     local ttl = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(16, 12),
-        Size = UDim2.new(1, -32, 0, 18),
+        Position = UDim2.fromOffset(textOffsetX, 12),
+        Size = UDim2.new(1, -textOffsetX - 16, 0, 18),
         Font = Enum.Font.GothamMedium,
         TextSize = 12,
-        TextColor3 = theme.Text,
+        TextColor3 = Color3.fromRGB(30, 30, 30),
         TextTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = notifTitle,
@@ -6489,11 +6543,11 @@ function Library:Notify(opts)
     })
     local body = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(16, 34),
-        Size = UDim2.new(1, -32, 0, 38),
+        Position = UDim2.fromOffset(textOffsetX, 34),
+        Size = UDim2.new(1, -textOffsetX - 16, 0, 38),
         Font = Enum.Font.Gotham,
         TextSize = 11,
-        TextColor3 = theme.SubText,
+        TextColor3 = Color3.fromRGB(70, 70, 70),
         TextTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
@@ -6524,6 +6578,12 @@ function Library:Notify(opts)
         tween(cs,   0.25, {Transparency = 1})
         tween(notifShadow, 0.25, {ImageTransparency = 1})
         tween(notifGlow,   0.25, {ImageTransparency = 1})
+        if hasTabIcon then
+            tween(iconBg, 0.25, {BackgroundTransparency = 1})
+            local s = iconBg:FindFirstChildOfClass("UIStroke")
+            if s then tween(s, 0.25, {Transparency = 1}) end
+            tween(iconImg, 0.25, {ImageTransparency = 1})
+        end
         tween(ttl,  0.25, {TextTransparency = 1})
         local t = tween(body, 0.25, {TextTransparency = 1})
         t.Completed:Connect(function()
@@ -6532,7 +6592,7 @@ function Library:Notify(opts)
             end
             holder:Destroy()
             for i, c in ipairs(notifStack) do
-                tween(c, 0.2, {Position = UDim2.new(0, 20, 1, -20 - ((i-1) * 88))})
+                tween(c, 0.2, {Position = UDim2.new(1, -20, 1, -20 - ((i-1) * 88))})
             end
         end)
     end)
