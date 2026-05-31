@@ -2312,7 +2312,7 @@ function Library:CreateWindow(cfg)
 
     local BACK_ARROW_ID = "rbxassetid://11770525190"
 
-    local dashboardVisible  = true
+    local dashboardVisible  = false  -- home screen removed: open straight to the first tab
     local themesViewOpen    = false
     local dashboardOverlay
     local themesView
@@ -2517,7 +2517,7 @@ function Library:CreateWindow(cfg)
         BorderSizePixel  = 0,
         ZIndex           = 30,
         ClipsDescendants = true,
-        Visible          = true,
+        Visible          = false,  -- home screen removed: never shown on launch
         Active           = true,
         Parent           = card,
     })
@@ -3473,23 +3473,16 @@ function Library:CreateWindow(cfg)
                 exitMiniMode()
             end
 
-            if not (dashboardOverlay and dashboardOverlay.Parent) then
-                if not Window._settingsTab then
-                    Window._settingsTabCreated = true
-                    pcall(function()
-                        Window:CreateSettingsTab(cfg.SettingsTabOptions)
-                    end)
-                end
-                if Window._settingsTab then
-                    Window:SelectTab(Window._settingsTab)
-                end
-                return
+            -- Home screen removed: this button now just opens the Settings tab
+            -- (theme customization, etc.), creating it on first use.
+            if not Window._settingsTab then
+                Window._settingsTabCreated = true
+                pcall(function()
+                    Window:CreateSettingsTab(cfg.SettingsTabOptions)
+                end)
             end
-
-            if dashboardVisible then
-                dismissDashboard(nil)
-            else
-                showDashboard()
+            if Window._settingsTab then
+                Window:SelectTab(Window._settingsTab)
             end
         end)
     end
