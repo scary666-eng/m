@@ -6541,15 +6541,19 @@ function Library:Notify(opts)
         game:GetService("Debris"):AddItem(sound, 3)
     end)
 
-    local tabIconName = opts.TabIcon
-    local hasTabIcon = tabIconName ~= nil
+    local tabIconName = opts.TabIcon or opts.Icon
     local iconData
-    if hasTabIcon then
+    if tabIconName then
         iconData = resolveIcon(tabIconName)
-        if not iconData or not iconData.Image then
-            hasTabIcon = false
+    end
+    if not iconData or not iconData.Image then
+        if opts.Image then
+            iconData = { Image = opts.Image }
+        else
+            iconData = { Image = "rbxassetid://78968317665673" }
         end
     end
+    local hasTabIcon = true
 
     local textOffsetX = hasTabIcon and 54 or 16
 
