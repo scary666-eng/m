@@ -2161,6 +2161,7 @@ function Library:CreateWindow(cfg)
     Window.SearchByFlag = {}
     Window.Favorites    = {}
     Window.FlagControls = {}
+    Window.AutoPersistControlFlags = {}
     Window.PendingConfigFlags = {}
     Window.AutoSaveConfig = false
     Window.AutoSaveDebounce = 0.7
@@ -2328,6 +2329,14 @@ function Library:CreateWindow(cfg)
 
     local uiSettingsApplying    = false
     local lastUiSettingsEncoded = nil
+    local autoControlStateApplying = false
+    local autoControlStateSaveToken = 0
+    local lastAutoControlStateEncoded = nil
+
+    local function autoControlStatePath()
+        local folder = Window.ConfigFolder or sanitizeConfigName(name)
+        return string.format("%s/%s", folder, "__vanta_dropdown_slider_state.json")
+    end
 
     local function writeUiSettingsFile()
         if type(writefile) ~= "function" then return end
@@ -2365,6 +2374,69 @@ function Library:CreateWindow(cfg)
         end)
     end
     Window.SaveUISettings = saveUiSettings
+
+    local function writeAutoControlStateFile()
+        if type(writefile) ~= "function" then return end
+        local folder = Window.ConfigFolder or sanitizeConfigName(name)
+        if type(isfolder) == "function" and not isfolder(folder) then
+            if type(makefolder) == "function" then pcall(makefolder, folder) end
+        end
+        local flags = {}
+        for flagName in pairs(Window.AutoPersistControlFlags) do
+            local v = Library.Flags[flagName]
+            if v ~= nil then
+                flags[flagName] = encodeConfigValue(v)
+            end
+        end
+        local payload = { __vantaAutoControlState = 1, flags = flags }
+        local okEnc, encoded = pcall(HttpService.JSONEncode, HttpService, payload)
+        if not okEnc then return end
+        if encoded == lastAutoControlStateEncoded then return end
+        if pcall(writefile, autoControlStatePath(), encoded) then
+            lastAutoControlStateEncoded = encoded
+        end
+    end
+
+    local function queueAutoControlStateSave()
+        if autoControlStateApplying then return end
+        if type(writefile) ~= "function" then return end
+        autoControlStateSaveToken = autoControlStateSaveToken + 1
+        local tok = autoControlStateSaveToken
+        task.delay(0.2, function()
+            if tok ~= autoControlStateSaveToken then return end
+            pcall(writeAutoControlStateFile)
+        end)
+    end
+    Window.SaveAutoControlState = queueAutoControlStateSave
+
+    local function loadAutoControlState()
+        if type(readfile) ~= "function" or type(isfile) ~= "function" then return false end
+        local path = autoControlStatePath()
+        if not isfile(path) then return false end
+        local okRead, raw = pcall(readfile, path)
+        if not okRead or type(raw) ~= "string" or raw == "" then return false end
+        local okDec, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
+        if not okDec or type(decoded) ~= "table" then return false end
+        local sourceFlags = decoded.flags
+        if type(sourceFlags) ~= "table" then sourceFlags = decoded end
+
+        autoControlStateApplying = true
+        for flagName, enc in pairs(sourceFlags) do
+            if type(flagName) == "string" and string.sub(flagName, 1, 2) ~= "__" then
+                local cloned = cloneConfigValue(decodeConfigValue(enc))
+                Library.Flags[flagName] = cloned
+                local ctl = Window.FlagControls[flagName]
+                if ctl and type(ctl.Set) == "function" then
+                    pcall(function() ctl:Set(cloneConfigValue(cloned)) end)
+                else
+                    Window.PendingConfigFlags[flagName] = cloned
+                end
+            end
+        end
+        autoControlStateApplying = false
+        return true
+    end
+    Window.LoadAutoControlState = loadAutoControlState
 
     -- Push loaded values straight into the live UI. The Settings tab may not be
     -- built yet (it's created lazily), and some controls' :Set don't re-apply
@@ -2457,6 +2529,8 @@ function Library:CreateWindow(cfg)
     -- Restore the saved look right now, before the consumer builds its tabs, so
     -- later-created controls inherit the saved theme colors too.
     pcall(loadUiSettings)
+    -- Restore always-on dropdown/slider state without requiring manual config load.
+    pcall(loadAutoControlState)
 
     -- Hold "M" to reveal white corner guards; dragging a corner smoothly scales
     -- the UI. Nothing appears until M has been held for at least 0.6s, so a quick
@@ -5319,6 +5393,7 @@ function Library:CreateWindow(cfg)
             local inc = opts.Increment or 1
             local suffix = opts.Suffix or ""
             local value = opts.CurrentValue or minV
+            if opts.Flag then Window.AutoPersistControlFlags[opts.Flag] = true end
 
             local row = new("Frame", {
                 BackgroundColor3 = Color3.new(1, 1, 1),
@@ -5412,6 +5487,7 @@ function Library:CreateWindow(cfg)
                 if opts.Flag then Library.Flags[opts.Flag] = v end
                 if fire and opts.Callback then task.spawn(opts.Callback, v) end
                 if fire and opts.Flag then scheduleAutoSave() end
+                if fire and opts.Flag then queueAutoControlStateSave() end
             end
 
             setValue(value, false)
@@ -5458,6 +5534,7 @@ function Library:CreateWindow(cfg)
             local multi = opts.MultipleOptions and true or false
             local options = opts.Options or {}
             local selected = normalizeCurrent(opts.CurrentOption, multi, options)
+            if opts.Flag then Window.AutoPersistControlFlags[opts.Flag] = true end
 
             local COLLAPSED_H = 44
             local OPT_H = 32
@@ -5608,6 +5685,7 @@ function Library:CreateWindow(cfg)
                             if opts.Flag then Library.Flags[opts.Flag] = list end
                             if opts.Callback then task.spawn(opts.Callback, list) end
                             if opts.Flag then scheduleAutoSave() end
+                            if opts.Flag then queueAutoControlStateSave() end
                         else
                             selected = opt
                             val.Text = opt
@@ -5619,6 +5697,7 @@ function Library:CreateWindow(cfg)
                             if opts.Flag then Library.Flags[opts.Flag] = opt end
                             if opts.Callback then task.spawn(opts.Callback, opt) end
                             if opts.Flag then scheduleAutoSave() end
+                            if opts.Flag then queueAutoControlStateSave() end
                         end
                     end)
                     table.insert(optButtons, ob)
@@ -5683,6 +5762,7 @@ function Library:CreateWindow(cfg)
                         end
                     end
                     scheduleAutoSave()
+                    queueAutoControlStateSave()
                 end
             end
             function obj:Refresh(newOpts)
